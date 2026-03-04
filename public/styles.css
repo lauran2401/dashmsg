@@ -9,6 +9,15 @@
   background: var(--bg);
   padding: 12px 0 8px;
 }
+.row.back{
+  color:#007aff;
+  font-weight:600;
+}
+
+.row.back::before{
+  content:"‹ ";
+  font-weight:700;
+}
 .topbar-inner{
   display:flex;
   align-items:center;
