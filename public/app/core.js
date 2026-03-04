@@ -19,6 +19,9 @@ const DashMsg = (() => {
     const STORAGE_KEY = "dashmsg_state";
     const TESTER_ID_KEY = "dashmsg_tester_id";
     
+const API_LOG_URL  = "./api/log";
+const API_FB_URL   = "./api/feedback";
+    
     // Get query parameters
     const params = new URLSearchParams(location.search);
     const returnUrl = params.get("return");
