@@ -1,83 +1,109 @@
 /**
- * DashMsg UI Rendering System (SAFE: no inline onclick)
+ * DashMsg UI Rendering System (Beefed + Safe)
  *
- * - Renders screens from DashMsgMenus
- * - Uses data-action + delegated click handler
- * - Calls DashMsg / DashMsgEditors safely
+ * Goals:
+ * - Zero “Unexpected end of script” from onclick strings
+ * - No inline JS strings for actions (uses dataset + event delegation)
+ * - Home button always available (topbar)
+ * - Back + Cancel support (Cancel exits to Shortcut if return= provided)
+ * - Green “Copied” banner (toast) with preview text
+ * - Shopping menu auto-populates from user stores
+ * - Lightweight + readable
  */
 
 const DashMsgUI = (() => {
   const app = document.getElementById("app");
   if (!app) console.error("DashMsgUI: #app container missing");
 
-  function escapeHtml(text) {
-    const div = document.createElement("div");
-    div.textContent = String(text ?? "");
-    return div.innerHTML;
-  }
-
-  function encodeAction(obj) {
-    // Safe for HTML attributes
-    return encodeURIComponent(JSON.stringify(obj));
-  }
-
-  function decodeAction(str) {
-    return JSON.parse(decodeURIComponent(str));
-  }
-
-  function showCopied(text) {
+  // ---------- toast ----------
+  function ensureToast() {
     let banner = document.getElementById("copy-preview");
     let txt = document.getElementById("preview-text");
 
     if (!banner) {
       banner = document.createElement("div");
       banner.id = "copy-preview";
-      banner.style.background = "#34c759";
-      banner.style.color = "white";
-      banner.style.padding = "14px";
-      banner.style.borderRadius = "12px";
-      banner.style.marginBottom = "16px";
-      banner.style.fontSize = "15px";
-      banner.innerHTML =
-        `<div style="font-size:11px;text-transform:uppercase;margin-bottom:4px;opacity:.85">Copied</div>
-         <div id="preview-text"></div>`;
+      banner.className = "copy-preview";
+      banner.style.display = "none";
+      banner.innerHTML = `
+        <div class="copy-preview__label">Copied</div>
+        <div id="preview-text" class="copy-preview__text"></div>
+      `;
+      // Prefer inside body top; iOS web view behaves better
       document.body.prepend(banner);
       txt = document.getElementById("preview-text");
     }
-
-    txt.textContent = String(text ?? "");
-    banner.style.display = "block";
-    setTimeout(() => (banner.style.display = "none"), 2200);
+    return { banner, txt };
   }
-  
+
+  function showCopied(text) {
+    const { banner, txt } = ensureToast();
+    txt.textContent = String(text || "");
+    banner.style.display = "block";
+    clearTimeout(showCopied._t);
+    showCopied._t = setTimeout(() => {
+      banner.style.display = "none";
+    }, 1800);
+  }
+
+  // ---------- html safety ----------
+  function escapeHtml(text) {
+    const div = document.createElement("div");
+    div.textContent = text == null ? "" : String(text);
+    return div.innerHTML;
+  }
+
+  // ---------- action serialization ----------
+  function encodeAction(action) {
+    try {
+      return encodeURIComponent(JSON.stringify(action || {}));
+    } catch {
+      return encodeURIComponent("{}");
+    }
+  }
+
+  function decodeAction(encoded) {
+    try {
+      return JSON.parse(decodeURIComponent(encoded || "%7B%7D"));
+    } catch {
+      return {};
+    }
+  }
+
+  // ---------- topbar ----------
+  function topbarHtml(title) {
+    return `
+      <div class="topbar">
+        <button class="topbar-btn" data-ui="home">Home</button>
+        <div class="topbar-title">${escapeHtml(title || "")}</div>
+        <button class="topbar-btn muted" data-ui="back">Back</button>
+      </div>
+    `;
+  }
+
+  // ---------- render ----------
   function renderScreen(title, sections) {
-    let html = `
-  <div class="topbar">
-    <button class="home-btn" onclick="DashMsgUI.goHome()">Home</button>
-    <h1>${escapeHtml(title)}</h1>
-  </div>
-  `;
-    sections.forEach((section) => {
+    if (!app) return;
+
+    let html = topbarHtml(title);
+
+    (sections || []).forEach((section) => {
       if (section.header) {
         html += `<div class="menu-title">${escapeHtml(section.header)}</div>`;
       }
 
+      const items = section.items || [];
       html += `<div class="list">`;
 
-      (section.items || []).forEach((item) => {
-        const itemClass = item.class ? ` ${item.class}` : "";
-        const more = item.more ? `<span>›</span>` : `<span></span>`;
-
-        // Normalize to an action object
-        const actionObj = item.action
-          ? { kind: "action", action: item.action }
-          : item.click
-          ? { kind: "expr", expr: item.click }
-          : { kind: "noop" };
+      items.forEach((item) => {
+        const cls = item.class ? ` ${escapeHtml(item.class)}` : "";
+        const more = item.more ? `<span class="chev">›</span>` : `<span class="chev"></span>`;
+        const action = item.action ? item.action : (item.click ? { type: "raw", handler: item.click } : { type: "noop" });
 
         html += `
-          <button class="row${itemClass}" data-dashmsg-action="${encodeAction(actionObj)}">
-            ${escapeHtml(item.label)}
+          <button class="row${cls}"
+                  data-action="${encodeAction(action)}">
+            <span class="row-label">${escapeHtml(item.label)}</span>
             ${more}
           </button>
         `;
@@ -87,172 +113,167 @@ const DashMsgUI = (() => {
     });
 
     app.innerHTML = html;
-  }
 
-  // Single delegated handler (no inline JS)
-  app.addEventListener("click", (ev) => {
-    const btn = ev.target.closest("button[data-dashmsg-action]");
-    if (!btn) return;
+    // Single delegated listener per render
+    app.onclick = (ev) => {
+      const btn = ev.target.closest("button.row, button.topbar-btn");
+      if (!btn) return;
 
-    let payload;
-    try {
-      payload = decodeAction(btn.getAttribute("data-dashmsg-action"));
-    } catch (e) {
-      console.error("Bad action payload", e);
-      alert("Action error (bad payload).");
-      return;
-    }
+      const ui = btn.getAttribute("data-ui");
+      if (ui === "home") return goHome();
+      if (ui === "back") return navBack();
 
-    try {
-      if (payload.kind === "expr") {
-        // Last-resort compatibility for old click strings
-        (new Function(payload.expr))();
-        return;
+      if (btn.classList.contains("row")) {
+        const action = decodeAction(btn.getAttribute("data-action"));
+        runAction(action);
       }
-
-      if (payload.kind !== "action") return;
-
-      const a = payload.action || {};
-      switch (a.type) {
-        case "template":
-          useTemplate(a.key, a.category || "Message", a.extras || {});
-          return;
-
-        case "nav":
-          navigateTo(a.screen);
-          return;
-
-        case "navBack":
-          navBack();
-          return;
-
-        case "cancel":
-          // Global exit
-          DashMsg.exitApp();
-          return;
-
-        case "function":
-          // Explicit, safe dispatch (no arbitrary eval)
-          // Allow:
-          // - DashMsgUI.setETA()
-          // - DashMsgEditors.showTemplateEditor()
-          // - DashMsgEditors.showStoreEditor()
-          // - DashMsgEditors.resetAll()
-          dispatchFunction(a.handler);
-          return;
-
-        default:
-          console.warn("Unknown action", a);
-          return;
-      }
-    } catch (e) {
-      console.error(e);
-      alert(String(e?.message || e));
-    }
-  });
-  function goHome() {
-
-  const main = DashMsgMenus?.main;
-  if (!main) return;
-
-  while (DashMsg.getNavDepth() > 0) {
-    DashMsg.popNav();
+    };
   }
 
-  DashMsg.pushNav("main");
-
-  renderScreen(main.title, main.sections);
-}
-  function dispatchFunction(handler) {
-    const h = String(handler || "").trim();
-
-    if (h === "DashMsgUI.setETA()") return setETA();
-    if (h === "DashMsgEditors.showTemplateEditor()") return DashMsgEditors.showTemplateEditor();
-    if (h === "DashMsgEditors.showStoreEditor()") return DashMsgEditors.showStoreEditor();
-    if (h === "DashMsgEditors.resetAll()") return DashMsgEditors.resetAll();
-    if (h.includes("DashMsg.setPref")) return new Function(h)();
-    if (h.includes("DashMsgUI.navigateTo")) return new Function(h)();
-    throw new Error("Blocked handler: " + h);
-  }
-
-  function useTemplate(key, category = "Message", extras = {}) {
-    const template = DashMsg.getTemplate(key);
-    if (!template) {
-      console.error("Template not found:", key);
-      return;
-    }
-    DashMsg.finishMessage(template, key, category, extras);
-  }
-  function goHome() {
-
-  const main = DashMsgMenus?.main;
-  if (!main) return;
-
-  while (DashMsg.getNavDepth() > 0) {
-    DashMsg.popNav();
-  }
-
-  DashMsg.pushNav("main");
-
-  renderScreen(main.title, main.sections);
-}
-  function navigateTo(screenName) {
+  // ---------- navigation ----------
+  function navigateTo(screenName, { push = true } = {}) {
     const menu = window.DashMsgMenus?.[screenName];
     if (!menu) {
-      console.error("Menu not found:", screenName);
+      console.error("DashMsgUI: menu not found:", screenName);
       return;
     }
-    DashMsg.pushNav(screenName);
+    if (push) window.DashMsg?.pushNav?.(screenName);
     renderScreen(menu.title, menu.sections);
   }
 
-  function navBack() {
-    DashMsg.popNav();
-    const stack = DashMsg.navStack();
-    if (!stack.length) return navigateTo("main");
-
-    const screen = stack[stack.length - 1];
-    const menu = window.DashMsgMenus?.[screen];
-    if (menu) renderScreen(menu.title, menu.sections);
-    else navigateTo("main");
+  function goHome() {
+    // Reset nav stack to just main (prevents stack bloat)
+    try {
+      // If you want hard reset stack:
+      // (not required, but keeps behavior clean)
+      // We can't directly mutate DashMsg internal navStack; so we do a simple approach:
+      // pop until empty, then push "main"
+      while (window.DashMsg?.getNavDepth?.() > 0) window.DashMsg.popNav();
+    } catch {}
+    navigateTo("main", { push: true });
   }
 
+  function navBack() {
+    window.DashMsg?.popNav?.();
+    const stack = window.DashMsg?.navStack?.() || [];
+    if (!stack.length) return navigateTo("main", { push: true });
+
+    const prev = stack[stack.length - 1];
+    // do NOT push again, we are rendering the existing stack top
+    navigateTo(prev, { push: false });
+  }
+
+  // ---------- actions ----------
+  function runAction(action) {
+    if (!action || typeof action !== "object") return;
+
+    switch (action.type) {
+      case "template":
+        return useTemplate(action.key, action.category || "Message", action.extras || {});
+      case "nav":
+        return navigateTo(action.screen);
+      case "navBack":
+        return navBack();
+      case "cancel":
+        return exitApp();
+      case "function":
+        return runFunctionString(action.handler);
+      case "raw":
+        return runFunctionString(action.handler);
+      default:
+        return;
+    }
+  }
+
+  function runFunctionString(code) {
+    if (!code) return;
+    try {
+      // Executes trusted local strings (your own menus.js).
+      // This is safer than inline onclick because it won't break HTML.
+      (new Function(code))();
+    } catch (e) {
+      console.error("DashMsgUI: function handler failed:", e);
+      alert(e?.message || String(e));
+    }
+  }
+
+  // ---------- template execution ----------
+  async function useTemplate(key, category = "Message", extras = {}) {
+    const template = window.DashMsg?.getTemplate?.(key);
+    if (!template) {
+      console.error("DashMsgUI: template not found:", key);
+      return;
+    }
+    // DashMsg.finishMessage already handles name prompt + emojis + copy + return
+    const before = template;
+    await window.DashMsg.finishMessage(before, key, category, extras);
+
+    // If DashMsg returned via Shortcut, you may never see this.
+    // But if user opened web directly, this is visible.
+    // Show copied preview if we can reconstruct final (best effort).
+    try {
+      // DashMsg.finishMessage copies the final text; we can show the raw template too,
+      // but we'd rather not lie. If return is missing, it shows alert already.
+      // Keep toast minimal: show key
+      showCopied(`Sent: ${key}`);
+    } catch {}
+  }
+
+  // ---------- ETA ----------
   function setETA() {
     const eta = prompt("ETA? (example: 5 min)");
     if (!eta) return;
 
-    const msg = DashMsg.renderTemplate(DashMsg.getTemplate("HEADING_WITH_ETA"), { ETA: eta });
-    DashMsg.finishMessage(msg, "HEADING_WITH_ETA", "Delivery", { used_eta: 1 });
+    const tpl = window.DashMsg?.getTemplate?.("HEADING_WITH_ETA") || "";
+    const msg = window.DashMsg?.renderTemplate?.(tpl, { ETA: eta }) || "";
+    window.DashMsg?.finishMessage?.(msg, "HEADING_WITH_ETA", "Delivery", { used_eta: 1 });
   }
 
+  // ---------- shopping population ----------
   function populateShoppingMenu() {
-    const stores = DashMsg.getStores();
-    const shoppingMenu = window.DashMsgMenus?.shopping;
-    if (!shoppingMenu) return;
+    const menu = window.DashMsgMenus?.shopping;
+    if (!menu || !menu.sections || !menu.sections.length) return;
 
-    shoppingMenu.sections[0].items = [];
-    stores.forEach((store) => {
-      shoppingMenu.sections[0].items.push({
-        label: store,
-        action: {
-          type: "template",
-          key: "SHOP_SINGLE",
-          category: "Shopping",
-          extras: { store }
-        }
-      });
-    });
+    const stores = window.DashMsg?.getStores?.() || [];
+    menu.sections[0].items = (stores || []).map((store) => ({
+      label: store,
+      action: {
+        type: "template",
+        key: "SHOP_SINGLE",
+        category: "Shopping",
+        extras: { store }
+      }
+    }));
   }
 
+  // ---------- cancel/exit ----------
+  function exitApp() {
+    // If DashMsg has a formal exit function, use it.
+    if (window.DashMsg?.exitApp) return window.DashMsg.exitApp();
+
+    // Otherwise: return empty to Shortcut if return= exists, else close.
+    const params = new URLSearchParams(location.search);
+    const ret = params.get("return");
+    if (ret) {
+      try { location.href = ret; } catch { /* ignore */ }
+      return;
+    }
+    try { window.close(); } catch { /* ignore */ }
+  }
+
+  // ---------- public ----------
   return {
     renderScreen,
     navigateTo,
     navBack,
+    goHome,
+    runAction,
     useTemplate,
     setETA,
     populateShoppingMenu,
     showCopied,
-    escapeHtml
+    escapeHtml,
+    exitApp,
   };
 })();
 
