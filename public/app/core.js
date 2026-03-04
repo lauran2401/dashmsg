@@ -358,3 +358,6 @@ const API_FB_URL   = "./api/feedback";
         getVersions
     };
 })();
+
+// expose for inline handlers + boot
+window.DashMsg = DashMsg;
