@@ -122,34 +122,40 @@ function withEmoji(text, on) {
 }
 
 async function finish(msg, key, category, extras = {}) {
-    let usedName = 0;
-    if (state.name_prompt && msg.startsWith("Hi!")) {
-        const name = prompt("Customer name?"); // Prompt might still be blocked if suppressed
-        if (name) {
-            msg = msg.replace("Hi!", `Hi, ${name}!`);
-            usedName = 1;
-        }
-    }
+    let finalMsg = msg;
     
-    const final = withEmoji(msg, state.emoji_on);
-    await logEvent(key, category, { used_name: usedName, ...extras });
-
-    try {
-        await navigator.clipboard.writeText(final);
-        
-        // BETTER FEEDBACK: Vibration instead of Alert
-        if (navigator.vibrate) navigator.vibrate(50); 
-        
-        // Change the button text temporarily to show it worked
-        const btn = event.target;
-        const originalText = btn.innerHTML;
-        btn.innerHTML = "✅ COPIED!";
-        setTimeout(() => { btn.innerHTML = originalText; }, 1500);
-
-    } catch (err) {
-        console.error('Failed to copy: ', err);
+    // 1. SMART PROMPT: Only ask for a name if the message has "Hi!" 
+    // AND we haven't already asked in this session.
+    if (msg.includes("Hi!") && !state.customerName) {
+        const name = prompt("Customer name? (Leave blank to skip)");
+        if (name) {
+            state.customerName = name; // Remember it for this delivery
+            finalMsg = msg.replace("Hi!", `Hi, ${name}!`);
+        }
+    } else if (state.customerName) {
+        // Use the name we already grabbed earlier
+        finalMsg = msg.replace("Hi!", `Hi, ${state.customerName}!`);
     }
+
+    const output = withEmoji(finalMsg, state.emoji_on);
+
+    // 2. BULLETPROOF COPY
+    const el = document.createElement('textarea');
+    el.value = output;
+    document.body.appendChild(el);
+    el.select();
+    document.execCommand('copy');
+    document.body.removeChild(el);
+
+    // 3. SILENT LOGGING (Don't wait for the DB to finish)
+    logEvent(key, category, { ...extras });
+
+    // 4. AUTO-CLOSE (Kicks you back to your Shortcut/Home Screen)
+    window.close();
 }
+
+
+    
 
 // ==============================
 // 2. UI RENDERER
