@@ -154,7 +154,8 @@ const DashMsgUI = (() => {
     if (h === "DashMsgEditors.showTemplateEditor()") return DashMsgEditors.showTemplateEditor();
     if (h === "DashMsgEditors.showStoreEditor()") return DashMsgEditors.showStoreEditor();
     if (h === "DashMsgEditors.resetAll()") return DashMsgEditors.resetAll();
-
+    if (h.includes("DashMsg.setPref")) return new Function(h)();
+    if (h.includes("DashMsgUI.navigateTo")) return new Function(h)();
     throw new Error("Blocked handler: " + h);
   }
 
