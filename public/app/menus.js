@@ -379,3 +379,5 @@ const DashMsgMenus = {
         ]
     }
 };
+
+window.DashMsgMenus = DashMsgMenus;
