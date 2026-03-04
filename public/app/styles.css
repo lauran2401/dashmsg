@@ -1,0 +1,166 @@
+# from the repo root
+git status              # see what’s changed
+git add .               # stage whatever you want to commit
+git commit -m "your message here"
+git push origin main    # or push your feature branch# from the repo root
+git status              # see what’s changed
+git add .               # stage whatever you want to commit
+git commit -m "your message here"
+git push origin main    # or push your feature branch/**
+ * DashMsg Styles
+ * 
+ * Supports light and dark modes
+ * Touch-optimized iOS interface
+ */
+
+:root {
+    --bg: #f2f2f7;
+    --card: #ffffff;
+    --text: #000000;
+    --blue: #007aff;
+    --gray: #8e8e93;
+    --border: #d1d1d6;
+    --red: #ff3b30;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg: #000000;
+        --card: #1c1c1e;
+        --text: #ffffff;
+        --blue: #0a84ff;
+        --gray: #48484a;
+        --border: #38383a;
+    }
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html, body {
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: -apple-system, system-ui, sans-serif;
+    background-color: var(--bg);
+    color: var(--text);
+    margin: 0;
+    padding: 20px;
+    -webkit-user-select: none;
+    user-select: none;
+    min-height: 100vh;
+}
+
+.container {
+    width: 100%;
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+h1 {
+    font-size: 28px;
+    font-weight: 800;
+    margin: 20px 0 20px 10px;
+}
+
+.menu-title {
+    font-size: 13px;
+    color: var(--gray);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 20px 0 8px 15px;
+    font-weight: 600;
+}
+
+.list {
+    background: var(--card);
+    border-radius: 12px;
+    border: 0.5px solid var(--border);
+    overflow: hidden;
+    margin-bottom: 20px;
+}
+
+.row {
+    width: 100%;
+    padding: 14px 16px;
+    font-size: 17px;
+    background: none;
+    border: none;
+    border-bottom: 0.5px solid var(--border);
+    color: var(--blue);
+    text-align: left;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+    transition: background-color 0.15s ease;
+}
+
+.row:active {
+    background-color: var(--gray);
+    opacity: 0.5;
+}
+
+.row:last-child {
+    border-bottom: none;
+}
+
+.row span {
+    color: var(--border);
+    font-weight: 600;
+    width: 20px;
+    text-align: right;
+}
+
+.row.back {
+    color: var(--gray);
+    font-weight: 500;
+}
+
+.row.destructive {
+    color: var(--red);
+}
+
+/* Text input styling for editors */
+input[type="text"],
+textarea {
+    width: 100%;
+    padding: 12px;
+    margin: 8px 0;
+    border: 0.5px solid var(--border);
+    border-radius: 8px;
+    background-color: var(--card);
+    color: var(--text);
+    font-family: -apple-system, system-ui, sans-serif;
+    font-size: 16px;
+}
+
+textarea {
+    min-height: 100px;
+    resize: vertical;
+    font-size: 14px;
+}
+
+input[type="text"]:focus,
+textarea:focus {
+    outline: none;
+    border-color: var(--blue);
+}
+
+/* Modal dialogs */
+input[type="text"]::placeholder {
+    color: var(--gray);
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+    .row {
+        transition: none;
+    }
+}

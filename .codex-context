@@ -1,0 +1,14 @@
+# IDENTITY: DashMsg Pro Development Environment
+# STACK: Cloudflare Pages + D1 + iOS Shortcuts Integration
+
+# ARCHITECTURE RULES:
+1. Frontend (public/app.html): iOS-native UI. Must use 'sms:?&body=' for output.
+2. Backend (functions/api/): Serverless JS workers handling POST requests.
+3. Database (D1): SQL storage for events, errors, and feedback.
+4. Logic: Use localStorage for persistence, but fetch/defaults.json for remote updates.
+
+# SHORTCUTS HANDSHAKE:
+- Launched via: https://your-project.pages.dev/app.html?source=shortcut
+- Problem: 'Show Web View' in Shortcuts DOES NOT support sms:// URLs.
+- Solution: The app must be opened in full Safari to allow deep-linking to Messages.
+- Every 'Finish' action must log to /api/log before jumping to SMS.
