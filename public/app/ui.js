@@ -49,19 +49,7 @@ const DashMsgUI = (() => {
     banner.style.display = "block";
     setTimeout(() => (banner.style.display = "none"), 2200);
   }
-  function goHome() {
-
-  const main = DashMsgMenus?.main;
-  if (!main) return;
-
-  while (DashMsg.getNavDepth() > 0) {
-    DashMsg.popNav();
-  }
-
-  DashMsg.pushNav("main");
-
-  renderScreen(main.title, main.sections);
-}
+  
   function renderScreen(title, sections) {
     let html = `
   <div class="topbar">
@@ -162,7 +150,19 @@ const DashMsgUI = (() => {
       alert(String(e?.message || e));
     }
   });
+  function goHome() {
 
+  const main = DashMsgMenus?.main;
+  if (!main) return;
+
+  while (DashMsg.getNavDepth() > 0) {
+    DashMsg.popNav();
+  }
+
+  DashMsg.pushNav("main");
+
+  renderScreen(main.title, main.sections);
+}
   function dispatchFunction(handler) {
     const h = String(handler || "").trim();
 
