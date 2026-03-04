@@ -119,7 +119,7 @@ function withEmoji(text, on) {
 async function finish(msg, key, category, extras = {}) {
     let usedName = 0;
     if (state.name_prompt && msg.startsWith("Hi!")) {
-        const name = prompt("Customer name? (Cancel to skip)");
+        const name = prompt("Customer name?"); // Prompt might still be blocked if suppressed
         if (name) {
             msg = msg.replace("Hi!", `Hi, ${name}!`);
             usedName = 1;
@@ -127,19 +127,20 @@ async function finish(msg, key, category, extras = {}) {
     }
     
     const final = withEmoji(msg, state.emoji_on);
-
-    // 1. Log to Database
     await logEvent(key, category, { used_name: usedName, ...extras });
 
-    // 2. Copy to Clipboard instead of opening SMS
     try {
         await navigator.clipboard.writeText(final);
         
-        // Visual feedback so you know it worked
-        alert("Copied to clipboard!"); 
+        // BETTER FEEDBACK: Vibration instead of Alert
+        if (navigator.vibrate) navigator.vibrate(50); 
         
-        // Optional: Close the window so the Shortcut continues
-        window.close(); 
+        // Change the button text temporarily to show it worked
+        const btn = event.target;
+        const originalText = btn.innerHTML;
+        btn.innerHTML = "✅ COPIED!";
+        setTimeout(() => { btn.innerHTML = originalText; }, 1500);
+
     } catch (err) {
         console.error('Failed to copy: ', err);
     }
