@@ -51,8 +51,12 @@ const DashMsgUI = (() => {
   }
 
   function renderScreen(title, sections) {
-    let html = `<h1>${escapeHtml(title)}</h1>`;
-
+    let html = `
+  <div class="topbar">
+    <button class="home-btn" onclick="DashMsgUI.goHome()">Home</button>
+    <h1>${escapeHtml(title)}</h1>
+  </div>
+  `;
     sections.forEach((section) => {
       if (section.header) {
         html += `<div class="menu-title">${escapeHtml(section.header)}</div>`;
