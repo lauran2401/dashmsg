@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>DashMsg App</title>
+</head>
+<body>
+  <h1>DashMsg</h1>
+  <p>This is a placeholder <code>app.html</code>. Replace with your actual application code.</p>
+
+  <script>
+    // analytics / logging helpers – copy to your real app
+    const API_KEY = "PASTE_SAME_KEY_AS_DASHMSG_API_KEY"; // rotate later for production
+    const APP_VERSION = "0.1.0";
+    const SCHEMA_VERSION = 1;
+    const SOURCE = new URLSearchParams(location.search).get("source") || "web";
+
+    function getTesterId() {
+      let id = localStorage.getItem("dashmsg_tester_id");
+      if (!id) {
+        id = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random());
+        localStorage.setItem("dashmsg_tester_id", id);
+      }
+      return id;
+    }
+
+    async function logEvent(payload) {
+      try {
+        await fetch("/api/log", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-dashmsg-key": API_KEY
+          },
+          body: JSON.stringify({
+            tester_id: getTesterId(),
+            source: SOURCE,
+            app_version: APP_VERSION,
+            schema_version: SCHEMA_VERSION,
+            ...payload
+          })
+        });
+      } catch {}
+    }
+
+    window.addEventListener("error", (e) => {
+      fetch("/api/error", {
+        method: "POST",
+        headers: {"Content-Type":"application/json", "x-dashmsg-key": API_KEY},
+        body: JSON.stringify({
+          tester_id: getTesterId(),
+          app_version: APP_VERSION,
+          schema_version: SCHEMA_VERSION,
+          message: e.message,
+          url: e.filename,
+          line: e.lineno,
+          col: e.colno,
+          stack: e.error && e.error.stack ? e.error.stack : ""
+        })
+      }).catch(()=>{});
+    });
+
+    async function sendFeedback(notes, templatesObj) {
+      await fetch("/api/feedback", {
+        method: "POST",
+        headers: {"Content-Type":"application/json", "x-dashmsg-key": API_KEY},
+        body: JSON.stringify({
+          tester_id: getTesterId(),
+          app_version: APP_VERSION,
+          schema_version: SCHEMA_VERSION,
+          notes,
+          templates_json: templatesObj || null
+        })
+      });
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,476 @@
+Fine. Here’s the full Cloudflare Pages + D1 + analytics + feedback package that will actually work, without Scriptable, without “maybe”, without 19 different tools duct-taped together.
+
+You’re building:
+	•	A hosted DashMsg “app” (app.html) + defaults (defaults.json)
+	•	A backend (/api/log, /api/error, /api/feedback) using Cloudflare Pages Functions
+	•	A database (Cloudflare D1) to analyze beta usage
+	•	A dead-simple tester ID + versioning + privacy-safe logging
+
+⸻
+
+0) What you’ll end up with
+
+URLs:
+	•	https://YOURPROJECT.pages.dev/app.html (the app)
+	•	https://YOURPROJECT.pages.dev/defaults.json (defaults)
+	•	https://YOURPROJECT.pages.dev/api/log (usage log)
+	•	https://YOURPROJECT.pages.dev/api/error (error log)
+	•	https://YOURPROJECT.pages.dev/api/feedback (feedback submission)
+
+Data stored in D1:
+	•	events (what menu/template used)
+	•	errors (JS errors)
+	•	feedback (notes, optional templates JSON)
+
+⸻
+
+1) Create the Cloudflare Pages project (with Functions)
+
+Option A (best): GitHub repo + automatic deploy
+	1.	Put files in a GitHub repo.
+	2.	Cloudflare Dashboard → Pages → Create project → Connect GitHub repo → Deploy.
+
+Option B: Direct Upload (works, but Functions are annoying)
+
+Direct Upload is fine for static, but Functions + D1 is much smoother with a repo.
+
+So: use GitHub. Humans hate it, but it saves time.
+
+⸻
+
+2) Repo structure (copy exactly)
+
+dashmsg/
+  public/
+    app.html
+    defaults.json
+  functions/
+    api/
+      log.js
+      error.js
+      feedback.js
+  wrangler.toml
+  schema.sql
+
+Cloudflare Pages serves public/* automatically.
+Cloudflare Pages Functions runs functions/* automatically.
+
+⸻
+
+3) Create the D1 database + schema
+
+Cloudflare Dashboard → D1 → Create database
+Name it: dashmsg_db
+
+Then run this schema (Dashboard D1 → Console → “Execute”):
+
+-- schema.sql
+
+CREATE TABLE IF NOT EXISTS events (
+  id TEXT PRIMARY KEY,
+  ts INTEGER NOT NULL,
+  tester_id TEXT NOT NULL,
+  source TEXT,
+  app_version TEXT,
+  schema_version INTEGER,
+  category TEXT,
+  template_key TEXT,
+  used_name INTEGER,
+  used_eta INTEGER,
+  used_hotbag INTEGER,
+  stops TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_events_ts ON events(ts);
+CREATE INDEX IF NOT EXISTS idx_events_tester ON events(tester_id);
+CREATE INDEX IF NOT EXISTS idx_events_template ON events(template_key);
+
+CREATE TABLE IF NOT EXISTS errors (
+  id TEXT PRIMARY KEY,
+  ts INTEGER NOT NULL,
+  tester_id TEXT,
+  app_version TEXT,
+  schema_version INTEGER,
+  message TEXT,
+  stack TEXT,
+  url TEXT,
+  line INTEGER,
+  col INTEGER
+);
+
+CREATE INDEX IF NOT EXISTS idx_errors_ts ON errors(ts);
+CREATE INDEX IF NOT EXISTS idx_errors_tester ON errors(tester_id);
+
+CREATE TABLE IF NOT EXISTS feedback (
+  id TEXT PRIMARY KEY,
+  ts INTEGER NOT NULL,
+  tester_id TEXT,
+  app_version TEXT,
+  schema_version INTEGER,
+  notes TEXT,
+  templates_json TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_feedback_ts ON feedback(ts);
+CREATE INDEX IF NOT EXISTS idx_feedback_tester ON feedback(tester_id);
+
+
+⸻
+
+4) Bind D1 + secrets to your Pages project
+
+Create wrangler.toml in repo root:
+
+name = "dashmsg"
+compatibility_date = "2026-03-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "dashmsg_db"
+database_id = "PUT_YOUR_D1_DATABASE_ID_HERE"
+
+Where do you get database_id?
+Cloudflare Dashboard → D1 → your database → ID.
+
+Now add a secret API key (simple shared key for beta):
+Cloudflare Dashboard → Pages → your project → Settings → Environment variables:
+	•	DASHMSG_API_KEY = some long random string (paste from password generator)
+
+Also add:
+	•	ALLOWED_ORIGIN = your Pages URL (or leave blank to allow all)
+
+⸻
+
+5) Pages Functions (the backend)
+
+functions/api/log.js
+
+export async function onRequestPost({ request, env }) {
+  const key = request.headers.get("x-dashmsg-key");
+  if (!key || key !== env.DASHMSG_API_KEY) {
+    return new Response("Unauthorized", { status: 401 });
+  }
+
+  const origin = request.headers.get("Origin") || "";
+  const allowed = env.ALLOWED_ORIGIN || "";
+  if (allowed && origin && origin !== allowed) {
+    return new Response("Forbidden origin", { status: 403 });
+  }
+
+  let body;
+  try { body = await request.json(); }
+  catch { return new Response("Bad JSON", { status: 400 }); }
+
+  const now = Date.now();
+  const id = crypto.randomUUID();
+
+  const tester_id = String(body.tester_id || "").slice(0, 80);
+  if (!tester_id) return new Response("tester_id required", { status: 400 });
+
+  const stmt = env.DB.prepare(`
+    INSERT INTO events
+    (id, ts, tester_id, source, app_version, schema_version, category, template_key,
+     used_name, used_eta, used_hotbag, stops)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `);
+
+  await stmt.bind(
+    id,
+    now,
+    tester_id,
+    String(body.source || "").slice(0, 40),
+    String(body.app_version || "").slice(0, 40),
+    Number(body.schema_version || 0),
+    String(body.category || "").slice(0, 40),
+    String(body.template_key || "").slice(0, 80),
+    body.used_name ? 1 : 0,
+    body.used_eta ? 1 : 0,
+    body.used_hotbag ? 1 : 0,
+    String(body.stops || "").slice(0, 20),
+  ).run();
+
+  return new Response(JSON.stringify({ ok: true, id }), {
+    headers: { "Content-Type": "application/json" }
+  });
+}
+
+export async function onRequestOptions({ request, env }) {
+  return cors(env);
+}
+
+function cors(env) {
+  const allowed = env.ALLOWED_ORIGIN || "*";
+  return new Response(null, {
+    status: 204,
+    headers: {
+      "Access-Control-Allow-Origin": allowed,
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type, X-DashMsg-Key",
+    }
+  });
+}
+
+functions/api/error.js
+
+export async function onRequestPost({ request, env }) {
+  const key = request.headers.get("x-dashmsg-key");
+  if (!key || key !== env.DASHMSG_API_KEY) return new Response("Unauthorized", { status: 401 });
+
+  let body;
+  try { body = await request.json(); }
+  catch { return new Response("Bad JSON", { status: 400 }); }
+
+  const now = Date.now();
+  const id = crypto.randomUUID();
+
+  await env.DB.prepare(`
+    INSERT INTO errors
+    (id, ts, tester_id, app_version, schema_version, message, stack, url, line, col)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).bind(
+    id,
+    now,
+    String(body.tester_id || "").slice(0, 80),
+    String(body.app_version || "").slice(0, 40),
+    Number(body.schema_version || 0),
+    String(body.message || "").slice(0, 400),
+    String(body.stack || "").slice(0, 2000),
+    String(body.url || "").slice(0, 300),
+    Number(body.line || 0),
+    Number(body.col || 0)
+  ).run();
+
+  return new Response(JSON.stringify({ ok: true, id }), {
+    headers: { "Content-Type": "application/json" }
+  });
+}
+
+functions/api/feedback.js
+
+export async function onRequestPost({ request, env }) {
+  const key = request.headers.get("x-dashmsg-key");
+  if (!key || key !== env.DASHMSG_API_KEY) return new Response("Unauthorized", { status: 401 });
+
+  let body;
+  try { body = await request.json(); }
+  catch { return new Response("Bad JSON", { status: 400 }); }
+
+  const now = Date.now();
+  const id = crypto.randomUUID();
+
+  const notes = String(body.notes || "").slice(0, 4000);
+  const templates_json = body.templates_json ? JSON.stringify(body.templates_json).slice(0, 20000) : null;
+
+  await env.DB.prepare(`
+    INSERT INTO feedback
+    (id, ts, tester_id, app_version, schema_version, notes, templates_json)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).bind(
+    id,
+    now,
+    String(body.tester_id || "").slice(0, 80),
+    String(body.app_version || "").slice(0, 40),
+    Number(body.schema_version || 0),
+    notes,
+    templates_json
+  ).run();
+
+  return new Response(JSON.stringify({ ok: true, id }), {
+    headers: { "Content-Type": "application/json" }
+  });
+}
+
+
+⸻
+
+6) defaults.json (your externalized templates + stores)
+
+Put your current default templates here:
+
+{
+  "schema_version": 1,
+  "app_version": "0.1.0",
+  "stores": ["Dollar General", "Food Lion", "Lowes Foods", "Walgreens", "CVS"],
+  "templates": {
+    "ARRIVED_WORKING": "Hi! I’ve arrived at the restaurant and they’re working on your order. I’ll be on my way shortly.",
+    "ARRIVED_FEW_MINUTES": "Hi! I’ve arrived at the restaurant and they’re still finishing up your order. It may take a few extra minutes, but I’ll head your way as soon as it’s ready 🚗",
+
+    "STOPS_ONE_HOTBAG": "Hi! I’m at the restaurant now waiting on your order. I have one quick stop before heading straight to you, and I’ll keep your food in a hot bag! 🔥",
+    "STOPS_ONE_NOHOTBAG": "Hi! I’m at the restaurant now waiting on your order. I have one quick stop before heading straight to you.",
+    "STOPS_COUPLE_HOTBAG": "Hi! I’m at the restaurant now waiting on your order. I have a couple quick stops before heading straight to you, and I’ll keep your food in a hot bag! 🔥",
+    "STOPS_COUPLE_NOHOTBAG": "Hi! I’m at the restaurant now waiting on your order. I have a couple quick stops before heading straight to you.",
+
+    "HEADING_NO_ETA": "Heading your way now.",
+    "HEADING_WITH_ETA": "Heading your way now. ETA around {ETA}.",
+    "TRAFFIC_DELAY": "Just a heads up — I’ve hit some traffic, but I’m on the way.",
+
+    "SHOP_SINGLE": "Hi! I’m at {STORE} getting started on your order 🛒 Please keep your phone nearby in case I need to check on a substitution.",
+    "SHOP_MULTIPLE": "Hi! I’m at {STORE} getting started on your order 🛒 I’m shopping a couple orders right now. Please keep your phone nearby in case I need to check on a substitution.",
+    "NO_RESPONSE_REPLACE": "I haven’t heard back, so I’ll replace any missing item(s) with a close substitute.",
+
+    "DELIVERED_FOOD": "Your order has been delivered. Enjoy! 🍽️",
+    "DELIVERED_SHOP": "Your order has been delivered. Thank you!",
+    "THANKS": "Thank you for your order! Have a great rest of your day!"
+  }
+}
+
+
+⸻
+
+7) app.html: add the analytics hooks (copy/paste)
+
+Inside your HTML/JS, set these constants:
+
+const API_KEY = "PASTE_SAME_KEY_AS_DASHMSG_API_KEY"; // yes, for beta. rotate later.
+const APP_VERSION = "0.1.0";
+const SCHEMA_VERSION = 1;
+const SOURCE = new URLSearchParams(location.search).get("source") || "web";
+
+Create tester_id once:
+
+function getTesterId() {
+  let id = localStorage.getItem("dashmsg_tester_id");
+  if (!id) {
+    id = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random());
+    localStorage.setItem("dashmsg_tester_id", id);
+  }
+  return id;
+}
+
+Log events when a message is generated:
+
+async function logEvent(payload) {
+  try {
+    await fetch("/api/log", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-dashmsg-key": API_KEY
+      },
+      body: JSON.stringify({
+        tester_id: getTesterId(),
+        source: SOURCE,
+        app_version: APP_VERSION,
+        schema_version: SCHEMA_VERSION,
+        ...payload
+      })
+    });
+  } catch {}
+}
+
+Error capture:
+
+window.addEventListener("error", (e) => {
+  fetch("/api/error", {
+    method: "POST",
+    headers: {"Content-Type":"application/json", "x-dashmsg-key": API_KEY},
+    body: JSON.stringify({
+      tester_id: getTesterId(),
+      app_version: APP_VERSION,
+      schema_version: SCHEMA_VERSION,
+      message: e.message,
+      url: e.filename,
+      line: e.lineno,
+      col: e.colno,
+      stack: e.error && e.error.stack ? e.error.stack : ""
+    })
+  }).catch(()=>{});
+});
+
+And when user taps “Send Feedback”:
+
+async function sendFeedback(notes, templatesObj) {
+  await fetch("/api/feedback", {
+    method: "POST",
+    headers: {"Content-Type":"application/json", "x-dashmsg-key": API_KEY},
+    body: JSON.stringify({
+      tester_id: getTesterId(),
+      app_version: APP_VERSION,
+      schema_version: SCHEMA_VERSION,
+      notes,
+      templates_json: templatesObj || null
+    })
+  });
+}
+
+Privacy-safe: you’re not sending customer text, just template keys and toggles.
+
+⸻
+
+8) Shortcut setup (so it feels native)
+
+Create Shortcut: DashMsg
+	•	Action: Open URL
+	•	https://YOURPROJECT.pages.dev/app.html?source=shortcut
+
+Optional (nice):
+	•	Add to Home Screen
+	•	Assign to Action Button / AssistiveTouch
+
+That’s your “app” launcher.
+
+⸻
+
+9) How you’ll analyze beta results (real queries)
+
+Cloudflare Dashboard → D1 → Console:
+
+Most used templates:
+
+SELECT template_key, COUNT(*) as n
+FROM events
+GROUP BY template_key
+ORDER BY n DESC
+LIMIT 50;
+
+Feature adoption (ETA/name/hotbag):
+
+SELECT
+  SUM(used_eta) as eta_used,
+  SUM(used_name) as name_used,
+  SUM(used_hotbag) as hotbag_used,
+  COUNT(*) as total
+FROM events;
+
+Active testers:
+
+SELECT tester_id, COUNT(*) as n, MAX(ts) as last_ts
+FROM events
+GROUP BY tester_id
+ORDER BY n DESC;
+
+Errors by frequency:
+
+SELECT message, COUNT(*) as n
+FROM errors
+GROUP BY message
+ORDER BY n DESC
+LIMIT 25;
+
+Feedback list:
+
+SELECT ts, tester_id, notes
+FROM feedback
+ORDER BY ts DESC
+LIMIT 50;
+
+
+⸻
+
+10) The one “beta packaging” rule
+
+Don’t hardcode your API key into a public production app long-term. For beta testers it’s fine. When you productize:
+	•	switch to per-tester tokens (issued via a tiny endpoint)
+	•	or use Cloudflare Turnstile / signed requests
+But for your friend test? This is perfect.
+
+⸻
+
+What I need from you to finalize your exact package
+
+Paste your current working app.html (the one in the Shortcut text box). I’ll return:
+	•	a cleaned app.html that matches your menu structure + clean UI
+	•	your defaults.json
+	•	and I’ll point out exactly where to drop in the logging calls (template key + category + toggles)
+
+Because right now I gave you the backend + instrumentation scaffold, but your UI code needs the 3-line “logEvent({category, template_key…})” insert in the right spots.
