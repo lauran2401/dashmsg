@@ -1,0 +1,87 @@
+/* DashMsg Stealth Edition 
+ * High-contrast, Ultra-minimalist, Zero-clutter
+ */
+
+:root {
+    --bg: #000000;
+    --card: #121214;
+    --text: #FFFFFF;
+    --accent: #0A84FF;
+    --border: #2C2C2E;
+    --secondary: #8E8E93;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    background-color: var(--bg);
+    color: var(--text);
+    margin: 0;
+    padding: 24px;
+    -webkit-font-smoothing: antialiased;
+}
+
+.container {
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+h1 {
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: -1px;
+    margin-bottom: 32px;
+}
+
+.menu-title {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--secondary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin: 0 0 10px 4px;
+}
+
+.list {
+    background: var(--card);
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    margin-bottom: 24px;
+    overflow: hidden;
+}
+
+.row {
+    width: 100%;
+    padding: 18px 20px;
+    background: none;
+    border: none;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    transition: background 0.1s ease;
+}
+
+/* The only "fancy" part: a very thin separator */
+.row:not(:last-child) {
+    border-bottom: 1px solid var(--border);
+}
+
+.row-label {
+    font-size: 17px;
+    font-weight: 500;
+    color: var(--text);
+}
+
+.row:active {
+    background-color: #1C1C1E;
+}
+
+/* Blue accent only for the action indicator */
+.chevron {
+    color: var(--accent);
+    font-size: 18px;
+    font-weight: 300;
+}
+
+.row.back .row-label { color: var(--secondary); }
+.row.destructive .row-label { color: #FF453A; }
