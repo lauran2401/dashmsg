@@ -1,78 +1,248 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <title>DashMsg App</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <title>DashMsg Engine</title>
+    <style>
+        :root {
+            --bg: #f2f2f7; --card: #ffffff; --text: #000000;
+            --blue: #007aff; --gray: #8e8e93; --border: #d1d1d6;
+            --red: #ff3b30;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #000000; --card: #1c1c1e; --text: #ffffff;
+                --blue: #0a84ff; --gray: #48484a; --border: #38383a;
+            }
+        }
+        body {
+            font-family: -apple-system, system-ui; background-color: var(--bg); color: var(--text);
+            margin: 0; padding: 20px; -webkit-user-select: none;
+        }
+        .container { width: 100%; max-width: 400px; margin: 0 auto; }
+        h1 { font-size: 28px; font-weight: 800; margin: 20px 0 20px 10px; }
+        .menu-title { font-size: 13px; color: var(--gray); text-transform: uppercase; margin: 20px 0 8px 15px; }
+        .list { background: var(--card); border-radius: 12px; border: 0.5px solid var(--border); overflow: hidden; margin-bottom: 20px; }
+        .row {
+            width: 100%; padding: 14px 16px; font-size: 17px; background: none; border: none;
+            color: var(--blue); text-align: left; border-bottom: 0.5px solid var(--border);
+            cursor: pointer; display: flex; justify-content: space-between; align-items: center;
+        }
+        .row:active { background-color: var(--gray); opacity: 0.5; }
+        .row:last-child { border-bottom: none; }
+        .row span { color: var(--border); font-weight: 600; }
+        .back { color: var(--gray); font-weight: 500; }
+        .destructive { color: var(--red); }
+    </style>
 </head>
 <body>
-  <h1>DashMsg</h1>
-  <p>This is a placeholder <code>app.html</code>. Replace with your actual application code.</p>
+<div class="container" id="app"></div>
 
-  <script>
-    // analytics / logging helpers – copy to your real app
-    const API_KEY = "PASTE_SAME_KEY_AS_DASHMSG_API_KEY"; // rotate later for production
-    const APP_VERSION = "0.1.0";
-    const SCHEMA_VERSION = 1;
-    const SOURCE = new URLSearchParams(location.search).get("source") || "web";
+<script>
+// ==============================
+// 1. ORIGINAL DATA & LOGIC
+// ==============================
+const API_KEY = "DashMaster_2026!"; // <--- PUT YOUR SECRET HERE
+const APP_VERSION = "1.0.0";
+const SCHEMA_VERSION = 1;
+const SOURCE = new URLSearchParams(location.search).get("source") || "web";
 
-    function getTesterId() {
-      let id = localStorage.getItem("dashmsg_tester_id");
-      if (!id) {
-        id = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random());
+const DEFAULT_DATA = {
+    stores: ["Dollar General", "Food Lion", "Lowes Foods", "Walgreens", "CVS"],
+    templates: {
+        ARRIVED_WORKING: "Hi! I’ve arrived at the restaurant and they’re working on your order. I’ll be on my way shortly.",
+        ARRIVED_FEW_MINUTES: "Hi! I’ve arrived at the restaurant and they’re still finishing up your order. It may take a few extra minutes, but I’ll head your way as soon as it’s ready 🚗",
+        STOPS_ONE_HOTBAG: "Hi! I’m at the restaurant now waiting on your order. I have one quick stop before heading straight to you, and I’ll keep your food in a hot bag! 🔥",
+        STOPS_ONE_NOHOTBAG: "Hi! I’m at the restaurant now waiting on your order. I have one quick stop before heading straight to you.",
+        STOPS_COUPLE_HOTBAG: "Hi! I’m at the restaurant now waiting on your order. I have a couple quick stops before heading straight to you, and I’ll keep your food in a hot bag! 🔥",
+        STOPS_COUPLE_NOHOTBAG: "Hi! I’m at the restaurant now waiting on your order. I have a couple quick stops before heading straight to you.",
+        HEADING_NO_ETA: "Heading your way now.",
+        HEADING_WITH_ETA: "Heading your way now. ETA around {ETA}.",
+        TRAFFIC_DELAY: "Just a heads up — I’ve hit some traffic, but I’m on the way.",
+        SHOP_SINGLE: "Hi! I’m at {STORE} getting started on your order 🛒 Please keep your phone nearby in case I need to check on a substitution.",
+        SHOP_MULTIPLE: "Hi! I’m at {STORE} getting started on your order 🛒 I’m shopping a couple orders right now. Please keep your phone nearby.",
+        NO_RESPONSE_REPLACE: "I haven’t heard back, so I’ll replace any missing items with close substitutes.",
+        DELIVERED_FOOD: "Your order has been delivered. Enjoy! 🍽️",
+        THANKS: "Thank you for your order! Have a great rest of your day!"
+    }
+};
+
+let state = JSON.parse(localStorage.getItem('dashmsg_state')) || {
+    emoji_on: true,
+    name_prompt: true,
+    hotbag_default: true,
+    custom_stores: [...DEFAULT_DATA.stores]
+};
+
+function save() { localStorage.setItem('dashmsg_state', JSON.stringify(state)); }
+
+function getTesterId() {
+    let id = localStorage.getItem("dashmsg_tester_id");
+    if (!id) {
+        id = crypto.randomUUID();
         localStorage.setItem("dashmsg_tester_id", id);
-      }
-      return id;
     }
+    return id;
+}
 
-    async function logEvent(payload) {
-      try {
+// LOGGING SYSTEM
+async function logEvent(key, category, extras = {}) {
+    try {
         await fetch("/api/log", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-dashmsg-key": API_KEY
-          },
-          body: JSON.stringify({
-            tester_id: getTesterId(),
-            source: SOURCE,
-            app_version: APP_VERSION,
-            schema_version: SCHEMA_VERSION,
-            ...payload
-          })
+            method: "POST",
+            headers: { "Content-Type": "application/json", "x-dashmsg-key": API_KEY },
+            body: JSON.stringify({
+                tester_id: getTesterId(),
+                source: SOURCE,
+                app_version: APP_VERSION,
+                schema_version: SCHEMA_VERSION,
+                category: category,
+                template_key: key,
+                ...extras
+            })
         });
-      } catch {}
-    }
+    } catch (e) { console.error("Log fail", e); }
+}
 
-    window.addEventListener("error", (e) => {
-      fetch("/api/error", {
-        method: "POST",
-        headers: {"Content-Type":"application/json", "x-dashmsg-key": API_KEY},
-        body: JSON.stringify({
-          tester_id: getTesterId(),
-          app_version: APP_VERSION,
-          schema_version: SCHEMA_VERSION,
-          message: e.message,
-          url: e.filename,
-          line: e.lineno,
-          col: e.colno,
-          stack: e.error && e.error.stack ? e.error.stack : ""
-        })
-      }).catch(()=>{});
+function renderTemplate(tpl, vars = {}) {
+    let s = tpl;
+    for (const [k, v] of Object.entries(vars)) { s = s.split(`{${k}}`).join(v); }
+    return s;
+}
+
+function withEmoji(text, on) {
+    if (on) return text;
+    return text.replace(/[\u2700-\u27BF]|[\uE000-\uF8FF]|\uD83C[\uDC00-\uDFFF]|\uD83D[\uDC00-\uDFFF]|[\u2011-\u26FF]|\uD83E[\uDD00-\uDDFF]/g, '').trim();
+}
+
+async function finish(msg, key, category, extras = {}) {
+    let usedName = 0;
+    if (state.name_prompt && msg.startsWith("Hi!")) {
+        const name = prompt("Customer name? (Cancel to skip)");
+        if (name) {
+            msg = msg.replace("Hi!", `Hi, ${name}!`);
+            usedName = 1;
+        }
+    }
+    
+    // Log before deep link
+    await logEvent(key, category, { used_name: usedName, ...extras });
+
+    const final = withEmoji(msg, state.emoji_on);
+    window.location.href = `sms:?&body=${encodeURIComponent(final)}`;
+}
+
+// ==============================
+// 2. UI RENDERER
+// ==============================
+const app = document.getElementById('app');
+
+function view(title, sections) {
+    let html = `<h1>${title}</h1>`;
+    sections.forEach(sec => {
+        if (sec.header) html += `<div class="menu-title">${sec.header}</div>`;
+        html += `<div class="list">`;
+        sec.items.forEach(item => {
+            html += `<button class="row ${item.class || ''}" onclick="${item.click}">${item.label} <span>${item.more ? '›' : ''}</span></button>`;
+        });
+        html += `</div>`;
     });
+    app.innerHTML = html;
+}
 
-    async function sendFeedback(notes, templatesObj) {
-      await fetch("/api/feedback", {
-        method: "POST",
-        headers: {"Content-Type":"application/json", "x-dashmsg-key": API_KEY},
-        body: JSON.stringify({
-          tester_id: getTesterId(),
-          app_version: APP_VERSION,
-          schema_version: SCHEMA_VERSION,
-          notes,
-          templates_json: templatesObj || null
-        })
-      });
-    }
-  </script>
+// ==============================
+// 3. NAVIGATION (The Menus)
+// ==============================
+function goMain() {
+    view("DashMsg", [
+        { items: [
+            { label: "Pickup", more: true, click: "goPickup()" },
+            { label: "En Route", more: true, click: "goEnRoute()" },
+            { label: "Shopping", more: true, click: "goShopping()" },
+            { label: "Delivered", more: true, click: "goDelivered()" }
+        ]},
+        { items: [{ label: "Settings", more: true, click: "goSettings()" }] }
+    ]);
+}
+
+function goPickup() {
+    view("Pickup", [
+        { header: "Status", items: [
+            { label: "Arrived - Working", click: "finish(DEFAULT_DATA.templates.ARRIVED_WORKING, 'ARRIVED_WORKING', 'Pickup')" },
+            { label: "Arrived - Few Minutes", click: "finish(DEFAULT_DATA.templates.ARRIVED_FEW_MINUTES, 'ARRIVED_FEW_MINUTES', 'Pickup')" }
+        ]},
+        { header: "Stacked Orders", items: [
+            { label: "1 Stop Ahead", more: true, click: "goStops(1)" },
+            { label: "2 Stops Ahead", more: true, click: "goStops(2)" }
+        ]},
+        { items: [{ label: "Back", class: "back", click: "goMain()" }] }
+    ]);
+}
+
+function goStops(count) {
+    const isOne = count === 1;
+    const keyPrefix = isOne ? 'STOPS_ONE' : 'STOPS_COUPLE';
+    view(`${count} Stop${isOne ? '' : 's'}`, [
+        { header: "Hot Bag?", items: [
+            { label: "Use Hot Bag", click: `finish(DEFAULT_DATA.templates.${keyPrefix}_HOTBAG, '${keyPrefix}_HOTBAG', 'Pickup', {used_hotbag: 1, stops: '${count}'})` },
+            { label: "No Hot Bag", click: `finish(DEFAULT_DATA.templates.${keyPrefix}_NOHOTBAG, '${keyPrefix}_NOHOTBAG', 'Pickup', {used_hotbag: 0, stops: '${count}'})` }
+        ]},
+        { items: [{ label: "Back", class: "back", click: "goPickup()" }] }
+    ]);
+}
+
+function goEnRoute() {
+    view("En Route", [
+        { items: [
+            { label: "Heading Your Way", click: "finish(DEFAULT_DATA.templates.HEADING_NO_ETA, 'HEADING_NO_ETA', 'Delivery')" },
+            { label: "Heading (Set ETA)", click: "setETA()" },
+            { label: "Traffic Delay", click: "finish(DEFAULT_DATA.templates.TRAFFIC_DELAY, 'TRAFFIC_DELAY', 'Delivery')" }
+        ]},
+        { items: [{ label: "Back", class: "back", click: "goMain()" }] }
+    ]);
+}
+
+function setETA() {
+    const eta = prompt("ETA? (e.g. 5 mins)");
+    if (eta) finish(renderTemplate(DEFAULT_DATA.templates.HEADING_WITH_ETA, {ETA: eta}), 'HEADING_WITH_ETA', 'Delivery', {used_eta: 1});
+}
+
+function goShopping() {
+    const storeItems = state.custom_stores.map(s => ({
+        label: s, click: `finish(renderTemplate(DEFAULT_DATA.templates.SHOP_SINGLE, {STORE: '${s}'}), 'SHOP_SINGLE', 'Shopping')`
+    }));
+    view("Shopping", [
+        { header: "Select Store", items: storeItems },
+        { items: [{ label: "Back", class: "back", click: "goMain()" }] }
+    ]);
+}
+
+function goDelivered() {
+    view("Delivered", [
+        { header: "Complete", items: [
+            { label: "Food Delivered", click: "finish(DEFAULT_DATA.templates.DELIVERED_FOOD, 'DELIVERED_FOOD', 'Delivery')" },
+            { label: "Thank You Only", click: "finish(DEFAULT_DATA.templates.THANKS, 'THANKS', 'Delivery')" }
+        ]},
+        { items: [{ label: "Back", class: "back", click: "goMain()" }] }
+    ]);
+}
+
+function goSettings() {
+    view("Settings", [
+        { header: "Preferences", items: [
+            { label: `Emojis: ${state.emoji_on ? 'ON' : 'OFF'}`, click: "toggle('emoji_on')" },
+            { label: `Name Prompt: ${state.name_prompt ? 'ON' : 'OFF'}`, click: "toggle('name_prompt')" }
+        ]},
+        { header: "Reset", items: [{ label: "Reset All Data", class: "destructive", click: "resetData()" }] },
+        { items: [{ label: "Back", class: "back", click: "goMain()" }] }
+    ]);
+}
+
+function toggle(key) { state[key] = !state[key]; save(); goSettings(); }
+function resetData() { if(confirm("Clear all settings?")) { localStorage.clear(); location.reload(); } }
+
+goMain();
+</script>
 </body>
 </html>
