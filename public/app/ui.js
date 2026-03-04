@@ -194,3 +194,5 @@ const DashMsgUI = (() => {
         escapeHtml
     };
 })();
+
+window.DashMsgUI = DashMsgUI;
