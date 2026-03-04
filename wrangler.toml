@@ -1,5 +1,5 @@
 name = "dashmsg"
-pages_build_output_dir = "public"
+pages_build_output_dir = "./public"
 compatibility_date = "2026-03-01"
 
 [[d1_databases]]

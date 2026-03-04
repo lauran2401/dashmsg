@@ -1,0 +1,319 @@
+You are restructuring a Cloudflare Pages web app called DashMsg.
+
+The goal is to separate the application into a small stable core and modular files so menus, templates, styles, and editors can be changed without modifying the core logic.
+
+Follow these instructions EXACTLY.
+
+--------------------------------
+1. TARGET PROJECT STRUCTURE
+--------------------------------
+
+Create this structure inside the repository.
+
+public/
+  index.html
+  defaults.json
+  app/
+    core.js
+    ui.js
+    menus.js
+    editors.js
+    styles.css
+
+Do not place code outside the public folder.
+
+Cloudflare Pages will serve the public folder as the root.
+
+--------------------------------
+2. index.html
+--------------------------------
+
+index.html must be a very thin loader.
+
+It should:
+
+• include styles.css
+• create the root app container
+• load the core engine
+• load menus and ui modules
+• boot the application
+
+The file should:
+
+- contain NO menu logic
+- contain NO template text
+- contain NO application logic
+
+Example responsibilities:
+
+1) load defaults.json
+2) initialize state
+3) call DashMsg.init()
+
+--------------------------------
+3. defaults.json
+--------------------------------
+
+This file is the canonical data source.
+
+It must contain:
+
+schema_version
+app_version
+stores
+templates
+
+Use the following structure:
+
+{
+  "schema_version": 1,
+  "app_version": "0.1.0",
+  "stores": [
+    "Dollar General",
+    "Food Lion",
+    "Lowes Foods",
+    "Walgreens",
+    "CVS"
+  ],
+  "templates": {
+    "ARRIVED_WORKING": "...",
+    "ARRIVED_FEW_MINUTES": "...",
+    "STOPS_ONE_HOTBAG": "...",
+    "STOPS_ONE_NOHOTBAG": "...",
+    "STOPS_COUPLE_HOTBAG": "...",
+    "STOPS_COUPLE_NOHOTBAG": "...",
+    "HEADING_NO_ETA": "...",
+    "HEADING_WITH_ETA": "...",
+    "TRAFFIC_DELAY": "...",
+    "SHOP_SINGLE": "...",
+    "SHOP_MULTIPLE": "...",
+    "NO_RESPONSE_REPLACE": "...",
+    "DELIVERED_FOOD": "...",
+    "DELIVERED_SHOP": "...",
+    "THANKS": "..."
+  }
+}
+
+Do not hardcode templates anywhere else in the app.
+
+--------------------------------
+4. core.js
+--------------------------------
+
+core.js is the application engine.
+
+It must implement:
+
+• state management
+• localStorage persistence
+• template rendering
+• emoji toggle
+• clipboard copy
+• shortcut return system
+• logging hook
+• initialization
+
+Responsibilities:
+
+Load defaults.json
+
+Merge defaults with user overrides stored in localStorage
+
+Maintain state object:
+
+state = {
+  prefs: {
+    emoji_on,
+    name_prompt,
+    hotbag_default
+  },
+  overrides: {
+    templates,
+    stores
+  },
+  session: {
+    customerName
+  }
+}
+
+Provide functions:
+
+DashMsg.init()
+DashMsg.renderScreen()
+DashMsg.finishMessage()
+DashMsg.renderTemplate()
+DashMsg.saveState()
+DashMsg.copyToClipboard()
+
+Handle the return shortcut parameter:
+
+?return=<encoded callback>
+
+When a message is finished:
+
+1) copy message
+2) return to shortcut
+
+--------------------------------
+5. ui.js
+--------------------------------
+
+ui.js contains the rendering system.
+
+Implement:
+
+renderScreen(title, sections)
+
+sections structure:
+
+[
+  {
+    header: "Status",
+    items: [
+      {
+        label: "Arrived - Working",
+        action: { type: "template", key: "ARRIVED_WORKING" }
+      }
+    ]
+  }
+]
+
+Responsibilities:
+
+• generate HTML
+• attach click handlers
+• call DashMsg actions
+
+--------------------------------
+6. menus.js
+--------------------------------
+
+menus.js defines the menu tree.
+
+It should export a structure:
+
+DashMsgMenus = {
+  main: { ... },
+  pickup: { ... },
+  stops_1: { ... },
+  stops_2: { ... },
+  enroute: { ... },
+  shopping: { ... },
+  delivered: { ... },
+  settings: { ... }
+}
+
+Each screen defines:
+
+title
+sections
+items
+navigation targets
+
+The core router must be able to load these dynamically.
+
+--------------------------------
+7. editors.js
+--------------------------------
+
+This file implements:
+
+Template Editor
+Store Editor
+
+Template editor must:
+
+• list template keys
+• allow editing
+• save to localStorage overrides
+• allow reset to default
+
+Store editor must:
+
+• add store
+• remove store
+• reorder list
+
+--------------------------------
+8. styles.css
+--------------------------------
+
+Move all CSS styling from index.html into this file.
+
+Ensure it supports:
+
+light mode
+dark mode
+
+Provide:
+
+.container
+.list
+.row
+.menu-title
+.back
+.destructive
+
+--------------------------------
+9. NAVIGATION SYSTEM
+--------------------------------
+
+Implement a small navigation stack:
+
+DashMsg.navStack = []
+
+Functions:
+
+push(screen)
+pop()
+
+Back buttons should call pop()
+
+--------------------------------
+10. DO NOT BREAK SHORTCUT FLOW
+--------------------------------
+
+The app must support a return parameter:
+
+?return=shortcuts://run-shortcut?name=DashMsg&input=text&text=
+
+When finishMessage() runs:
+
+location.href = returnUrl + encodedMessage
+
+--------------------------------
+11. INITIAL SCREEN
+--------------------------------
+
+When the app boots:
+
+DashMsg.init()
+then render the "main" menu.
+
+--------------------------------
+12. DO NOT USE ANY FRAMEWORKS
+--------------------------------
+
+No React
+No build tools
+No dependencies
+
+Pure HTML + JS + CSS only.
+
+--------------------------------
+13. GOAL
+--------------------------------
+
+The app must:
+
+• load cleanly on Cloudflare Pages
+• run fully inside iOS Shortcuts Web View
+• allow menu updates without editing core.js
+• allow template updates via defaults.json
+• allow user customization via localStorage
+
+--------------------------------
+14. AFTER GENERATING FILES
+--------------------------------
+
+Commit all files and ensure the Pages output directory remains "public".
