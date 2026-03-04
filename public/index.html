@@ -126,11 +126,23 @@ async function finish(msg, key, category, extras = {}) {
         }
     }
     
-    // Log before deep link
+    const final = withEmoji(msg, state.emoji_on);
+
+    // 1. Log to Database
     await logEvent(key, category, { used_name: usedName, ...extras });
 
-    const final = withEmoji(msg, state.emoji_on);
-    window.location.href = `sms:?&body=${encodeURIComponent(final)}`;
+    // 2. Copy to Clipboard instead of opening SMS
+    try {
+        await navigator.clipboard.writeText(final);
+        
+        // Visual feedback so you know it worked
+        alert("Copied to clipboard!"); 
+        
+        // Optional: Close the window so the Shortcut continues
+        window.close(); 
+    } catch (err) {
+        console.error('Failed to copy: ', err);
+    }
 }
 
 // ==============================
