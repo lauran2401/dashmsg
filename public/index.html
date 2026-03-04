@@ -37,7 +37,12 @@
     </style>
 </head>
 <body>
-<div class="container" id="app"></div>
+<div class="container" id="app">
+    <div id="copy-preview" style="display: none; background: #34c759; color: white; padding: 15px; border-radius: 12px; margin-bottom: 20px; font-size: 15px; border: 0.5px solid rgba(0,0,0,0.1);">
+        <div style="font-size: 11px; text-transform: uppercase; margin-bottom: 5px; opacity: 0.8;">Copied to Clipboard:</div>
+        <div id="preview-text"></div>
+    </div>
+</div>
 
 <script>
 // ==============================
@@ -119,7 +124,7 @@ function withEmoji(text, on) {
 async function finish(msg, key, category, extras = {}) {
     let usedName = 0;
     if (state.name_prompt && msg.startsWith("Hi!")) {
-        const name = prompt("Customer name?"); // Prompt might still be blocked if suppressed
+        const name = prompt("Customer name?");
         if (name) {
             msg = msg.replace("Hi!", `Hi, ${name}!`);
             usedName = 1;
@@ -132,14 +137,18 @@ async function finish(msg, key, category, extras = {}) {
     try {
         await navigator.clipboard.writeText(final);
         
-        // BETTER FEEDBACK: Vibration instead of Alert
-        if (navigator.vibrate) navigator.vibrate(50); 
+        // --- NEW: UI Feedback ---
+        const previewBox = document.getElementById('copy-preview');
+        const previewText = document.getElementById('preview-text');
         
-        // Change the button text temporarily to show it worked
-        const btn = event.target;
-        const originalText = btn.innerHTML;
-        btn.innerHTML = "✅ COPIED!";
-        setTimeout(() => { btn.innerHTML = originalText; }, 1500);
+        previewText.innerText = final;
+        previewBox.style.display = 'block';
+        
+        // Vibration for haptic feedback
+        if (navigator.vibrate) navigator.vibrate(50);
+
+        // Optional: Close after 3 seconds so you have time to read it
+        setTimeout(() => { window.close(); }, 3000);
 
     } catch (err) {
         console.error('Failed to copy: ', err);
