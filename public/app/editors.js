@@ -216,3 +216,5 @@ const DashMsgEditors = (() => {
         resetAll
     };
 })();
+
+window.DashMsgEditors = DashMsgEditors;
