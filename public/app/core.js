@@ -11,7 +11,7 @@
  * - Logging integration
  * - App initialization + nav stack
  */
-
+const PREFS_VERSION = 1;
 const DashMsg = (() => {
   const API_KEY = "DashMaster_2026!";
   const DEFAULTS_URL = "./defaults.json";
