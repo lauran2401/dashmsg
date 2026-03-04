@@ -55,7 +55,22 @@ const API_KEY = "DashMaster_2026!"; // <--- PUT YOUR SECRET HERE
 const APP_VERSION = "1.0.0";
 const SCHEMA_VERSION = 1;
 const SOURCE = new URLSearchParams(location.search).get("source") || "web";
+// ==============================
+// SHORTCUT RETURN SYSTEM
+// ==============================
 
+const params = new URLSearchParams(location.search);
+const RETURN_URL = params.get("return");
+
+function exitWithText(text) {
+  if (!RETURN_URL) return;
+  const url = decodeURIComponent(RETURN_URL) + encodeURIComponent(text || "");
+  location.href = url;
+}
+
+function exitApp() {
+  exitWithText("");
+}
 const DEFAULT_DATA = {
     stores: ["Dollar General", "Food Lion", "Lowes Foods", "Walgreens", "CVS"],
     templates: {
@@ -154,7 +169,7 @@ async function finish(msg, key, category, extras = {}) {
     logEvent(key, category, { ...extras });
 
     // 4. AUTO-CLOSE (Kicks you back to your Shortcut/Home Screen)
-    window.close();
+    exitWithText(output);
 }
 
 
