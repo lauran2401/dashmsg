@@ -130,12 +130,6 @@ const DashMsgUI = (() => {
 
     // subtle helpful subtitles
     const subtitleMap = {
-      main: "Pick a moment → get the perfect message",
-      pickup: "Waiting? Stacked? You’re covered",
-      enroute: "ETA and delays in one tap",
-      shopping: "Substitutions + store starts",
-      delivered: "Close it out clean",
-      settings: "Make it yours",
     };
 
     renderScreen(menu.title, menu.sections, { subtitle: subtitleMap[screenName] || "" });
