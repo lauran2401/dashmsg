@@ -13,6 +13,17 @@
   <script src="./app/ui.js"></script>
   <script src="./app/menus.js"></script>
   <script src="./app/editors.js"></script>
+  
+  <script>
+window.addEventListener("load", function () {
+  if (window.DashMsg && DashMsg.init) {
+    DashMsg.init();
+  } else {
+    document.body.innerHTML =
+      "<pre style='color:white;background:black;padding:12px'>DashMsg failed to load (core.js missing?)</pre>";
+  }
+});
+</script>
 
   <script>
     // Minimal boot + visible error surface (prevents “silent blank”)
