@@ -1,13 +1,14 @@
 /**
- * DashMsg UI Rendering System (NO inline onclick)
+ * DashMsg UI Rendering System (SAFE: no inline onclick)
  *
- * Fixes:
- * - “Unexpected end of script” from broken onclick attributes
- * - Safe passing of extras/store names containing quotes/apostrophes
+ * - Renders screens from DashMsgMenus
+ * - Uses data-action + delegated click handler
+ * - Calls DashMsg / DashMsgEditors safely
  */
 
 const DashMsgUI = (() => {
   const app = document.getElementById("app");
+  if (!app) console.error("DashMsgUI: #app container missing");
 
   function escapeHtml(text) {
     const div = document.createElement("div");
@@ -15,156 +16,192 @@ const DashMsgUI = (() => {
     return div.innerHTML;
   }
 
-  function b64EncodeUnicode(obj) {
-    const json = JSON.stringify(obj ?? {});
-    return btoa(unescape(encodeURIComponent(json)));
+  function encodeAction(obj) {
+    // Safe for HTML attributes
+    return encodeURIComponent(JSON.stringify(obj));
   }
 
-  function b64DecodeUnicode(b64) {
-    const json = decodeURIComponent(escape(atob(b64)));
-    return JSON.parse(json);
+  function decodeAction(str) {
+    return JSON.parse(decodeURIComponent(str));
+  }
+
+  function showCopied(text) {
+    let banner = document.getElementById("copy-preview");
+    let txt = document.getElementById("preview-text");
+
+    if (!banner) {
+      banner = document.createElement("div");
+      banner.id = "copy-preview";
+      banner.style.background = "#34c759";
+      banner.style.color = "white";
+      banner.style.padding = "14px";
+      banner.style.borderRadius = "12px";
+      banner.style.marginBottom = "16px";
+      banner.style.fontSize = "15px";
+      banner.innerHTML =
+        `<div style="font-size:11px;text-transform:uppercase;margin-bottom:4px;opacity:.85">Copied</div>
+         <div id="preview-text"></div>`;
+      document.body.prepend(banner);
+      txt = document.getElementById("preview-text");
+    }
+
+    txt.textContent = String(text ?? "");
+    banner.style.display = "block";
+    setTimeout(() => (banner.style.display = "none"), 2200);
   }
 
   function renderScreen(title, sections) {
-    if (!app) return;
-
     let html = `<h1>${escapeHtml(title)}</h1>`;
 
-    (sections || []).forEach((section) => {
+    sections.forEach((section) => {
       if (section.header) {
         html += `<div class="menu-title">${escapeHtml(section.header)}</div>`;
       }
 
-      const items = section.items || [];
-      if (!items.length) return;
-
       html += `<div class="list">`;
 
-      items.forEach((item, index) => {
+      (section.items || []).forEach((item) => {
         const itemClass = item.class ? ` ${item.class}` : "";
-        const more = item.more ? "<span>›</span>" : "<span></span>";
+        const more = item.more ? `<span>›</span>` : `<span></span>`;
 
-        // Store ONLY the action/click payload; never inline JS.
-        const payload = {
-          action: item.action || null,
-          click: item.click || null, // legacy support
-        };
+        // Normalize to an action object
+        const actionObj = item.action
+          ? { kind: "action", action: item.action }
+          : item.click
+          ? { kind: "expr", expr: item.click }
+          : { kind: "noop" };
 
-        html +=
-          `<button class="row${itemClass}" ` +
-          `data-dashmsg-action="${b64EncodeUnicode(payload)}">` +
-          `${escapeHtml(item.label)} ${more}</button>`;
+        html += `
+          <button class="row${itemClass}" data-dashmsg-action="${encodeAction(actionObj)}">
+            ${escapeHtml(item.label)}
+            ${more}
+          </button>
+        `;
       });
 
       html += `</div>`;
     });
 
     app.innerHTML = html;
-
-    // Attach listeners AFTER render
-    app.querySelectorAll("button[data-dashmsg-action]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const raw = btn.getAttribute("data-dashmsg-action");
-        if (!raw) return;
-        try {
-          const payload = b64DecodeUnicode(raw);
-          dispatch(payload);
-        } catch (e) {
-          console.error("Bad action payload", e);
-          alert("DashMsg UI error: bad action payload");
-        }
-      });
-    });
   }
 
-  function dispatch(payload) {
-    // Legacy string click like "DashMsgUI.setETA()"
-    if (payload?.click) {
-      try {
-        new Function(String(payload.click))();
-      } catch (e) {
-        console.error(e);
-        alert(String(e?.message || e));
-      }
+  // Single delegated handler (no inline JS)
+  app.addEventListener("click", (ev) => {
+    const btn = ev.target.closest("button[data-dashmsg-action]");
+    if (!btn) return;
+
+    let payload;
+    try {
+      payload = decodeAction(btn.getAttribute("data-dashmsg-action"));
+    } catch (e) {
+      console.error("Bad action payload", e);
+      alert("Action error (bad payload).");
       return;
     }
 
-    const a = payload?.action;
-    if (!a || !a.type) return;
-
-    switch (a.type) {
-      case "template":
-        useTemplate(a.key, a.category || "Message", a.extras || {});
+    try {
+      if (payload.kind === "expr") {
+        // Last-resort compatibility for old click strings
+        (new Function(payload.expr))();
         return;
+      }
 
-      case "nav":
-        navigateTo(a.screen);
-        return;
+      if (payload.kind !== "action") return;
 
-      case "navBack":
-        navBack();
-        return;
+      const a = payload.action || {};
+      switch (a.type) {
+        case "template":
+          useTemplate(a.key, a.category || "Message", a.extras || {});
+          return;
 
-      case "function":
-        // handler is a string like "DashMsgUI.setETA()" or "DashMsgEditors.showTemplateEditor()"
-        try {
-          new Function(String(a.handler || ""))();
-        } catch (e) {
-          console.error(e);
-          alert(String(e?.message || e));
-        }
-        return;
+        case "nav":
+          navigateTo(a.screen);
+          return;
 
-      default:
-        console.warn("Unknown action type:", a.type);
-        return;
+        case "navBack":
+          navBack();
+          return;
+
+        case "cancel":
+          // Global exit
+          DashMsg.exitApp();
+          return;
+
+        case "function":
+          // Explicit, safe dispatch (no arbitrary eval)
+          // Allow:
+          // - DashMsgUI.setETA()
+          // - DashMsgEditors.showTemplateEditor()
+          // - DashMsgEditors.showStoreEditor()
+          // - DashMsgEditors.resetAll()
+          dispatchFunction(a.handler);
+          return;
+
+        default:
+          console.warn("Unknown action", a);
+          return;
+      }
+    } catch (e) {
+      console.error(e);
+      alert(String(e?.message || e));
     }
+  });
+
+  function dispatchFunction(handler) {
+    const h = String(handler || "").trim();
+
+    if (h === "DashMsgUI.setETA()") return setETA();
+    if (h === "DashMsgEditors.showTemplateEditor()") return DashMsgEditors.showTemplateEditor();
+    if (h === "DashMsgEditors.showStoreEditor()") return DashMsgEditors.showStoreEditor();
+    if (h === "DashMsgEditors.resetAll()") return DashMsgEditors.resetAll();
+
+    throw new Error("Blocked handler: " + h);
   }
 
   function useTemplate(key, category = "Message", extras = {}) {
-    const template = window.DashMsg?.getTemplate?.(key);
-    if (template == null) {
-      console.error(`Template ${key} not found`);
-      alert(`Missing template: ${key}`);
+    const template = DashMsg.getTemplate(key);
+    if (!template) {
+      console.error("Template not found:", key);
       return;
     }
-    window.DashMsg.finishMessage(template, key, category, extras);
+    DashMsg.finishMessage(template, key, category, extras);
   }
 
   function navigateTo(screenName) {
     const menu = window.DashMsgMenus?.[screenName];
     if (!menu) {
-      console.error(`Menu screen "${screenName}" not found`);
-      alert(`Missing menu: ${screenName}`);
+      console.error("Menu not found:", screenName);
       return;
     }
-    window.DashMsg.pushNav(screenName);
+    DashMsg.pushNav(screenName);
     renderScreen(menu.title, menu.sections);
   }
 
   function navBack() {
-    window.DashMsg.popNav();
-    const stack = window.DashMsg.navStack();
-    const current = stack[stack.length - 1] || "main";
-    const menu = window.DashMsgMenus?.[current];
-    if (!menu) return;
-    renderScreen(menu.title, menu.sections);
+    DashMsg.popNav();
+    const stack = DashMsg.navStack();
+    if (!stack.length) return navigateTo("main");
+
+    const screen = stack[stack.length - 1];
+    const menu = window.DashMsgMenus?.[screen];
+    if (menu) renderScreen(menu.title, menu.sections);
+    else navigateTo("main");
   }
 
   function setETA() {
-    const eta = prompt("ETA? (e.g. 5 mins)");
+    const eta = prompt("ETA? (example: 5 min)");
     if (!eta) return;
-    const tpl = window.DashMsg.getTemplate("HEADING_WITH_ETA");
-    const msg = window.DashMsg.renderTemplate(tpl, { ETA: eta });
-    window.DashMsg.finishMessage(msg, "HEADING_WITH_ETA", "Delivery", { used_eta: 1 });
+
+    const msg = DashMsg.renderTemplate(DashMsg.getTemplate("HEADING_WITH_ETA"), { ETA: eta });
+    DashMsg.finishMessage(msg, "HEADING_WITH_ETA", "Delivery", { used_eta: 1 });
   }
 
   function populateShoppingMenu() {
-    const stores = window.DashMsg.getStores();
-    const shoppingMenu = window.DashMsgMenus.shopping;
+    const stores = DashMsg.getStores();
+    const shoppingMenu = window.DashMsgMenus?.shopping;
+    if (!shoppingMenu) return;
 
     shoppingMenu.sections[0].items = [];
-
     stores.forEach((store) => {
       shoppingMenu.sections[0].items.push({
         label: store,
@@ -172,8 +209,8 @@ const DashMsgUI = (() => {
           type: "template",
           key: "SHOP_SINGLE",
           category: "Shopping",
-          extras: { store }, // safe now
-        },
+          extras: { store }
+        }
       });
     });
   }
@@ -185,6 +222,8 @@ const DashMsgUI = (() => {
     useTemplate,
     setETA,
     populateShoppingMenu,
+    showCopied,
+    escapeHtml
   };
 })();
 
