@@ -10,8 +10,7 @@
  * - Logging integration
  * - Application initialization
  */
-window.addEventListener("error", (e) => {
-  const el = document.getElement
+
     
 const DashMsg = (() => {
     const API_KEY = "DashMaster_2026!";
