@@ -1,166 +1,166 @@
-# from the repo root
-git status              # see what’s changed
-git add .               # stage whatever you want to commit
-git commit -m "your message here"
-git push origin main    # or push your feature branch# from the repo root
-git status              # see what’s changed
-git add .               # stage whatever you want to commit
-git commit -m "your message here"
-git push origin main    # or push your feature branch/**
- * DashMsg Styles
- * 
- * Supports light and dark modes
- * Touch-optimized iOS interface
+/* * DashMsg Enterprise: Brilliant Edition
+ * Combining 2006 High-Gloss with 2026 Precision
  */
 
 :root {
-    --bg: #f2f2f7;
-    --card: #ffffff;
-    --text: #000000;
-    --blue: #007aff;
-    --gray: #8e8e93;
-    --border: #d1d1d6;
-    --red: #ff3b30;
+    /* Sophisticated Palette */
+    --bg-main: #f2f2f7;
+    --glass-card: rgba(255, 255, 255, 0.85);
+    --text-primary: #1c1c1e;
+    --text-secondary: #636366;
+    --accent-blue: #007aff;
+    --accent-red: #ff3b30;
+    --border-subtle: rgba(0, 0, 0, 0.1);
+    
+    /* 2006 Wavy/Glossy Effects */
+    --gloss-gradient: linear-gradient(180deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0) 50%, rgba(0,0,0,0.02) 100%);
+    --shadow-pro: 0 4px 12px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 @media (prefers-color-scheme: dark) {
     :root {
-        --bg: #000000;
-        --card: #1c1c1e;
-        --text: #ffffff;
-        --blue: #0a84ff;
-        --gray: #48484a;
-        --border: #38383a;
+        --bg-main: #000000;
+        --glass-card: rgba(28, 28, 30, 0.8);
+        --text-primary: #ffffff;
+        --text-secondary: #8e8e93;
+        --accent-blue: #0a84ff;
+        --accent-red: #ff453a;
+        --border-subtle: rgba(255, 255, 255, 0.12);
+        --gloss-gradient: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0) 100%);
+        --shadow-pro: 0 10px 30px rgba(0, 0, 0, 0.5);
     }
 }
 
 * {
     box-sizing: border-box;
-}
-
-html, body {
-    margin: 0;
-    padding: 0;
+    -webkit-font-smoothing: antialiased;
 }
 
 body {
-    font-family: -apple-system, system-ui, sans-serif;
-    background-color: var(--bg);
-    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background-color: var(--bg-main);
+    color: var(--text-primary);
     margin: 0;
-    padding: 20px;
+    padding: 24px 16px;
+    line-height: 1.5;
     -webkit-user-select: none;
-    user-select: none;
-    min-height: 100vh;
+    overflow-x: hidden;
 }
 
 .container {
     width: 100%;
-    max-width: 400px;
+    max-width: 420px;
     margin: 0 auto;
 }
 
+/* 2006-Style Brilliant Heading */
 h1 {
-    font-size: 28px;
+    font-size: 32px;
     font-weight: 800;
-    margin: 20px 0 20px 10px;
+    letter-spacing: -1px;
+    margin: 30px 0 24px 8px;
+    background: linear-gradient(to bottom, var(--text-primary) 60%, var(--text-secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
 }
 
 .menu-title {
-    font-size: 13px;
-    color: var(--gray);
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-secondary);
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin: 20px 0 8px 15px;
-    font-weight: 600;
+    letter-spacing: 1.2px;
+    margin-left: 16px;
+    margin-bottom: 8px;
 }
 
+/* The "Wavy/Glossy" List Container */
 .list {
-    background: var(--card);
-    border-radius: 12px;
-    border: 0.5px solid var(--border);
+    background: var(--glass-card);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 18px;
+    border: 1px solid var(--border-subtle);
+    box-shadow: var(--shadow-pro);
     overflow: hidden;
-    margin-bottom: 20px;
+    margin-bottom: 24px;
+    position: relative;
+}
+
+/* Adding the 2006 Gloss Overlay */
+.list::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: var(--gloss-gradient);
+    pointer-events: none;
+    z-index: 1;
 }
 
 .row {
     width: 100%;
-    padding: 14px 16px;
-    font-size: 17px;
-    background: none;
-    border: none;
-    border-bottom: 0.5px solid var(--border);
-    color: var(--blue);
-    text-align: left;
-    cursor: pointer;
+    padding: 16px 20px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    -webkit-user-select: none;
-    user-select: none;
-    -webkit-touch-callout: none;
-    transition: background-color 0.15s ease;
-}
-
-.row:active {
-    background-color: var(--gray);
-    opacity: 0.5;
+    background: transparent;
+    border: none;
+    border-bottom: 0.5px solid var(--border-subtle);
+    color: var(--accent-blue);
+    font-size: 17px;
+    font-weight: 500;
+    cursor: pointer;
+    z-index: 2;
+    position: relative;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .row:last-child {
     border-bottom: none;
 }
 
-.row span {
-    color: var(--border);
-    font-weight: 600;
-    width: 20px;
-    text-align: right;
+/* Professional Tap Interaction */
+.row:active {
+    background-color: rgba(142, 142, 147, 0.2);
+    transform: scale(0.98);
 }
 
+.row span.chevron {
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 400;
+    transition: transform 0.2s ease;
+}
+
+.row:hover span.chevron {
+    transform: translateX(3px);
+}
+
+/* Semantic Variants */
 .row.back {
-    color: var(--gray);
-    font-weight: 500;
+    color: var(--text-secondary);
+    background-color: rgba(0, 0, 0, 0.02);
 }
 
 .row.destructive {
-    color: var(--red);
+    color: var(--accent-red);
 }
 
-/* Text input styling for editors */
-input[type="text"],
-textarea {
+/* Glassmorphism Input Field */
+input[type="text"] {
     width: 100%;
-    padding: 12px;
-    margin: 8px 0;
-    border: 0.5px solid var(--border);
-    border-radius: 8px;
-    background-color: var(--card);
-    color: var(--text);
-    font-family: -apple-system, system-ui, sans-serif;
+    padding: 14px 16px;
+    border-radius: 12px;
+    border: 1px solid var(--border-subtle);
+    background: var(--card);
+    color: var(--text-primary);
     font-size: 16px;
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+    transition: border-color 0.2s ease;
 }
 
-textarea {
-    min-height: 100px;
-    resize: vertical;
-    font-size: 14px;
-}
-
-input[type="text"]:focus,
-textarea:focus {
+input[type="text"]:focus {
     outline: none;
-    border-color: var(--blue);
-}
-
-/* Modal dialogs */
-input[type="text"]::placeholder {
-    color: var(--gray);
-}
-
-/* Accessibility */
-@media (prefers-reduced-motion: reduce) {
-    .row {
-        transition: none;
-    }
+    border-color: var(--accent-blue);
+    box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.15);
 }
