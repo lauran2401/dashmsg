@@ -13,7 +13,7 @@
 
 const DashMsg = (() => {
     const API_KEY = "DashMaster_2026!";
-    const DEFAULTS_URL = "/defaults.json";
+    const DEFAULTS_URL = "./defaults.json";
     const STORAGE_KEY = "dashmsg_state";
     const TESTER_ID_KEY = "dashmsg_tester_id";
     
