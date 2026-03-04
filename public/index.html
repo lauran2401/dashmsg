@@ -48,6 +48,9 @@
 // ==============================
 // 1. ORIGINAL DATA & LOGIC
 // ==============================
+LOGIC
+// ==============================
+
 const API_KEY = "DashMaster_2026!"; // <--- PUT YOUR SECRET HERE
 const APP_VERSION = "1.0.0";
 const SCHEMA_VERSION = 1;
@@ -266,7 +269,9 @@ function goSettings() {
 function toggle(key) { state[key] = !state[key]; save(); goSettings(); }
 function resetData() { if(confirm("Clear all settings?")) { localStorage.clear(); location.reload(); } }
 
-goMain();
+loadDefaults().then(() => {
+  goMain();
+});
 </script>
 </body>
 </html>
