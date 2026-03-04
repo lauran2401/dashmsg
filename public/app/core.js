@@ -67,17 +67,38 @@ function exitApp() {
 
       // Merge saved state
       const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const savedState = JSON.parse(saved);
-        state = {
-          prefs: { ...state.prefs, ...(savedState.prefs || {}) },
-          overrides: {
-            templates: { ...(savedState.overrides?.templates || {}) },
-            stores: Array.isArray(savedState.overrides?.stores) ? savedState.overrides.stores : [],
-          },
-          session: { ...state.session, ...(savedState.session || {}) },
-        };
+
+if (saved) {
+  try {
+    const savedState = JSON.parse(saved);
+
+    state = {
+      prefs: {
+        ...state.prefs,
+        ...(savedState?.prefs || {})
+      },
+
+      overrides: {
+        templates: {
+          ...(savedState?.overrides?.templates || {})
+        },
+
+        stores: Array.isArray(savedState?.overrides?.stores)
+          ? savedState.overrides.stores
+          : []
+      },
+
+      session: {
+        ...state.session,
+        ...(savedState?.session || {})
       }
+    };
+
+  } catch (e) {
+    console.warn("DashMsg: corrupted localStorage, resetting", e);
+    localStorage.removeItem(STORAGE_KEY);
+  }
+}
 
       // If stores not set yet, seed from defaults
       if (!Array.isArray(state.overrides.stores) || state.overrides.stores.length === 0) {
