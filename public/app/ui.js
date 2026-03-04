@@ -52,21 +52,16 @@ const DashMsgUI = (() => {
   }
 
   // ---------- topbar ----------
-  function topbarHtml(title, subtitle = "") {
-    return `
-      <div class="topbar">
-        <div class="topbar-inner">
-          <button class="topbar-btn" data-ui="home">Home</button>
-          <div style="flex:1;min-width:0;">
-            <div class="topbar-title">${escapeHtml(title || "")}</div>
-            ${subtitle ? `<div class="topbar-subtitle">${escapeHtml(subtitle)}</div>` : ``}
-          </div>
-          <button class="topbar-btn" data-ui="back">Back</button>
-        </div>
+  function topbarHtml(title) {
+  return `
+    <div class="topbar">
+      <div class="topbar-inner">
+        <button class="topbar-btn" data-ui="home">Home</button>
+        <div class="topbar-title">${escapeHtml(title || "")}</div>
       </div>
-    `;
-  }
-
+    </div>
+  `;
+}
   // ---------- render ----------
   function renderScreen(title, sections, opts = {}) {
     if (!app) return;
@@ -113,7 +108,7 @@ const DashMsgUI = (() => {
 
       const ui = btn.getAttribute("data-ui");
       if (ui === "home") return goHome();
-      if (ui === "back") return navBack();
+     
 
       if (btn.classList.contains("row")) {
         const action = decodeAction(btn.getAttribute("data-action"));
