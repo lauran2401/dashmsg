@@ -1,174 +1,257 @@
 /**
  * DashMsg UI Rendering System
- * 
+ *
  * Responsibilities:
  * - Generate HTML from menu definitions
  * - Attach click handlers to buttons
  * - Manage the app container
- * - Call DashMsg actions
+ * - Show copy preview banner
+ * - Navigation handling
  */
 
 const DashMsgUI = (() => {
-    const app = document.getElementById('app');
-    
+
+    const app = document.getElementById("app");
+
     if (!app) {
-        console.error("No #app element found in DOM");
+        console.error("DashMsgUI: #app container missing");
     }
-    
+
     /**
-     * Render a screen with title and sections
-     * 
-     * sections format:
-     * [
-     *   {
-     *     header: "Status",
-     *     items: [
-     *       {
-     *         label: "Arrived - Working",
-     *         action: { type: "template", key: "ARRIVED_WORKING" }
-     *       },
-     *       {
-     *         label: "Back",
-     *         action: { type: "nav", screen: "main" }
-     *       }
-     *     ]
-     *   }
-     * ]
+     * Show green copied banner
+     */
+    function showCopied(text) {
+
+        let banner = document.getElementById("copy-preview");
+        let txt = document.getElementById("preview-text");
+
+        if (!banner) {
+
+            banner = document.createElement("div");
+            banner.id = "copy-preview";
+            banner.style.background = "#34c759";
+            banner.style.color = "white";
+            banner.style.padding = "14px";
+            banner.style.borderRadius = "12px";
+            banner.style.marginBottom = "16px";
+            banner.style.fontSize = "15px";
+
+            banner.innerHTML =
+                `<div style="font-size:11px;text-transform:uppercase;margin-bottom:4px;opacity:.85">
+                    Copied
+                 </div>
+                 <div id="preview-text"></div>`;
+
+            document.body.prepend(banner);
+
+            txt = document.getElementById("preview-text");
+        }
+
+        txt.textContent = text;
+        banner.style.display = "block";
+
+        setTimeout(() => {
+            banner.style.display = "none";
+        }, 2200);
+    }
+
+
+    /**
+     * Render screen
      */
     function renderScreen(title, sections) {
-        let html = `<h1>${escapeHtml(title)}</h1>`;
-        
+
+        let html = `
+        <div class="topbar">
+            <button class="home-btn" onclick="DashMsgUI.goHome()">Home</button>
+            <h1>${escapeHtml(title)}</h1>
+        </div>
+        `;
+
         sections.forEach(section => {
-            // Section header (optional)
+
             if (section.header) {
                 html += `<div class="menu-title">${escapeHtml(section.header)}</div>`;
             }
-            
-            // Items list
-            if (section.items && section.items.length > 0) {
-                html += `<div class="list">`;
-                
-                section.items.forEach((item, index) => {
-                    const isLast = index === section.items.length - 1;
-                    const itemClass = item.class ? ` ${item.class}` : '';
-                    const more = item.more ? '<span>›</span>' : '<span></span>';
-                    
-                    // Generate appropriate onclick handler
-                    let onClickCode = generateActionHandler(item);
-                    
-                    html += `<button class="row${itemClass}" onclick="${onClickCode}">${escapeHtml(item.label)} ${more}</button>`;
-                });
-                
-                html += `</div>`;
-            }
+
+            html += `<div class="list">`;
+
+            section.items.forEach((item, index) => {
+
+                const itemClass = item.class ? ` ${item.class}` : "";
+                const more = item.more ? `<span>›</span>` : `<span></span>`;
+
+                const onClick = generateActionHandler(item);
+
+                html += `
+                <button class="row${itemClass}" onclick="${onClick}">
+                    ${escapeHtml(item.label)}
+                    ${more}
+                </button>
+                `;
+            });
+
+            html += `</div>`;
         });
-        
-        if (app) {
-            app.innerHTML = html;
-        }
+
+        if (app) app.innerHTML = html;
     }
-    
+
+
     /**
-     * Generate onclick handler code for an item
+     * Generate click handler
      */
     function generateActionHandler(item) {
+
         if (item.action) {
+
             switch (item.action.type) {
-                case 'template':
-                    return `DashMsgUI.useTemplate('${item.action.key}', '${item.action.category || ''}', ${JSON.stringify(item.action.extras || {})})`;
-                case 'nav':
+
+                case "template":
+                    return `DashMsgUI.useTemplate('${item.action.key}','${item.action.category || ""}',${JSON.stringify(item.action.extras || {})})`;
+
+                case "nav":
                     return `DashMsgUI.navigateTo('${item.action.screen}')`;
-                case 'navBack':
+
+                case "navBack":
                     return `DashMsgUI.navBack()`;
-                case 'function':
-                    return item.action.handler || '';
-                default:
-                    return '';
+
+                case "cancel":
+                    return `DashMsg.exitApp()`;
+
+                case "function":
+                    return item.action.handler || "";
+
             }
         }
-        
-        // Fallback to custom click if provided
-        if (item.click) {
-            return item.click;
-        }
-        
-        return '';
+
+        if (item.click) return item.click;
+
+        return "";
     }
-    
+
+
     /**
-     * Escape HTML to prevent XSS
+     * Escape HTML
      */
     function escapeHtml(text) {
-        const div = document.createElement('div');
+
+        const div = document.createElement("div");
         div.textContent = text;
         return div.innerHTML;
     }
-    
+
+
     /**
-     * Use a template and finish the message
+     * Use template
      */
-    function useTemplate(key, category = '', extras = {}) {
+    function useTemplate(key, category = "", extras = {}) {
+
         const template = DashMsg.getTemplate(key);
+
         if (!template) {
-            console.error(`Template ${key} not found`);
+            console.error("Template not found:", key);
             return;
         }
-        
-        DashMsg.finishMessage(template, key, category || 'Message', extras);
+
+        DashMsg.finishMessage(template, key, category || "Message", extras);
     }
-    
+
+
     /**
-     * Navigate to a menu screen
+     * Navigate to screen
      */
     function navigateTo(screenName) {
+
         const menu = DashMsgMenus?.[screenName];
-        if (menu) {
-            DashMsg.pushNav(screenName);
-            renderScreen(menu.title, menu.sections);
-        } else {
-            console.error(`Menu screen "${screenName}" not found`);
+
+        if (!menu) {
+            console.error("Menu not found:", screenName);
+            return;
         }
+
+        DashMsg.pushNav(screenName);
+
+        renderScreen(menu.title, menu.sections);
     }
-    
+
+
     /**
-     * Navigate back using nav stack
+     * Go home
+     */
+    function goHome() {
+
+        const main = DashMsgMenus?.main;
+
+        if (!main) return;
+
+        DashMsg.pushNav("main");
+
+        renderScreen(main.title, main.sections);
+    }
+
+
+    /**
+     * Navigate back
      */
     function navBack() {
+
         DashMsg.popNav();
-        const navStack = DashMsg.navStack();
-        
-        if (navStack.length > 0) {
-            const currentScreen = navStack[navStack.length - 1];
-            const menu = DashMsgMenus?.[currentScreen];
-            if (menu) {
-                renderScreen(menu.title, menu.sections);
-            }
+
+        const stack = DashMsg.navStack();
+
+        if (stack.length === 0) {
+            goHome();
+            return;
+        }
+
+        const screen = stack[stack.length - 1];
+        const menu = DashMsgMenus?.[screen];
+
+        if (menu) {
+            renderScreen(menu.title, menu.sections);
         }
     }
-    
+
+
     /**
-     * Handle ETA input and finish message
+     * ETA prompt
      */
     function setETA() {
-        const eta = prompt("ETA? (e.g. 5 mins)");
-        if (eta) {
-            const template = DashMsg.renderTemplate(DashMsg.getTemplate('HEADING_WITH_ETA'), {ETA: eta});
-            DashMsg.finishMessage(template, 'HEADING_WITH_ETA', 'Delivery', {used_eta: 1});
-        }
+
+        const eta = prompt("ETA? (example: 5 min)");
+
+        if (!eta) return;
+
+        const template =
+            DashMsg.renderTemplate(
+                DashMsg.getTemplate("HEADING_WITH_ETA"),
+                { ETA: eta }
+            );
+
+        DashMsg.finishMessage(
+            template,
+            "HEADING_WITH_ETA",
+            "Delivery",
+            { used_eta: 1 }
+        );
     }
-    
+
+
     /**
-     * Dynamically populate shopping stores
+     * Populate shopping menu dynamically
      */
     function populateShoppingMenu() {
+
         const stores = DashMsg.getStores();
         const shoppingMenu = DashMsgMenus.shopping;
-        
-        // Clear existing items
+
+        if (!shoppingMenu) return;
+
         shoppingMenu.sections[0].items = [];
-        
-        // Add store items
+
         stores.forEach(store => {
+
             shoppingMenu.sections[0].items.push({
                 label: store,
                 action: {
@@ -178,21 +261,23 @@ const DashMsgUI = (() => {
                     extras: { store: store }
                 }
             });
+
         });
     }
-    
-    /**
-     * Public API
-     */
+
+
     return {
         renderScreen,
+        showCopied,
         useTemplate,
         navigateTo,
         navBack,
+        goHome,
         setETA,
         populateShoppingMenu,
         escapeHtml
     };
+
 })();
 
 window.DashMsgUI = DashMsgUI;
