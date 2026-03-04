@@ -21,6 +21,17 @@ const DashMsg = (() => {
   // API endpoints (Pages Functions route at /api/*)
   const API_LOG_URL = "/api/log";
   const API_FB_URL = "/api/feedback";
+  
+  function exitWithText(text) {
+  if (returnUrl) {
+    window.location.href = returnUrl + encodeURIComponent(text || "");
+  } else {
+    // no shortcut callback, just stay
+  }
+}
+function exitApp() {
+  exitWithText("");
+}
 
   // Query parameters
   const params = new URLSearchParams(location.search);
@@ -327,6 +338,9 @@ const DashMsg = (() => {
   // Public API
   return {
     init,
+    
+    exitApp,
+    exitWithText,
 
     // readonly snapshots
     state: () => JSON.parse(JSON.stringify(state)),
