@@ -114,7 +114,11 @@ if (saved) {
   }
 
   function saveState() {
+  try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch (e) {
+      console.warn("DashMsg: failed saving state", e);
+    }
   }
 
   function getVersions() {
