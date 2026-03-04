@@ -1,28 +1,34 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>DashMsg</title>
-    <link rel="stylesheet" href="./app/styles.css" />
-  </head>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>DashMsg</title>
+  <link rel="stylesheet" href="./app/styles.css" />
+</head>
+<body>
+  <div class="container" id="app"></div>
 
-  <body>
-    <div class="container" id="app"></div>
+  <script src="./app/core.js"></script>
+  <script src="./app/ui.js"></script>
+  <script src="./app/menus.js"></script>
+  <script src="./app/editors.js"></script>
 
-    <!-- Order matters -->
-    <script src="./app/core.js"></script>
-    <script src="./app/ui.js"></script>
-    <script src="./app/menus.js"></script>
-    <script src="./app/editors.js"></script>
-
-    <script>
-      // Boot once everything is loaded
-      if (document.readyState === "loading") {
-        document.addEventListener("DOMContentLoaded", () => DashMsg.init());
-      } else {
-        DashMsg.init();
+  <script>
+    // Minimal boot + visible error surface (prevents “silent blank”)
+    (function () {
+      function showErr(e) {
+        const msg = (e && (e.stack || e.message)) ? (e.stack || e.message) : String(e);
+        document.body.innerHTML =
+          '<pre style="white-space:pre-wrap;padding:12px;font:12px -apple-system;background:#111;color:#fff">' +
+          msg.replaceAll('<','&lt;') +
+          '</pre>';
       }
-    </script>
-  </body>
+      window.addEventListener('error', ev => showErr(ev.error || ev.message));
+      window.addEventListener('unhandledrejection', ev => showErr(ev.reason));
+
+      try { DashMsg.init(); } catch (e) { showErr(e); }
+    })();
+  </script>
+</body>
 </html>
