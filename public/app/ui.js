@@ -183,7 +183,19 @@ const DashMsgUI = (() => {
     }
     DashMsg.finishMessage(template, key, category, extras);
   }
+  function goHome() {
 
+  const main = DashMsgMenus?.main;
+  if (!main) return;
+
+  while (DashMsg.getNavDepth() > 0) {
+    DashMsg.popNav();
+  }
+
+  DashMsg.pushNav("main");
+
+  renderScreen(main.title, main.sections);
+}
   function navigateTo(screenName) {
     const menu = window.DashMsgMenus?.[screenName];
     if (!menu) {
