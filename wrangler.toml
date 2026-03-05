@@ -6,3 +6,7 @@ compatibility_date = "2026-03-01"
 binding = "DB"
 database_name = "dashmsg_db"
 database_id = "ca42317e-102d-4b77-b691-9de86a9a5a2f"
+
+[[r2_buckets]]
+binding = "REPORTS_BUCKET"
+bucket_name = "dashmsg-reports"
