@@ -1,244 +1,300 @@
 const DashMsgUI = (() => {
   const app = document.getElementById("app");
-  if (!app) console.error("DashMsgUI: #app container missing");
+  let currentScreen = "main";
+  let toastTimer = null;
 
-  // ---------- toast ----------
-  function ensureToast() {
-    let t = document.getElementById("dashmsg-toast");
-    if (!t) {
-      t = document.createElement("div");
-      t.id = "dashmsg-toast";
-      t.className = "toast";
-      t.innerHTML = `<div class="kicker" id="toast-kicker"></div><div class="msg" id="toast-msg"></div>`;
-      document.body.appendChild(t);
-    }
-    return t;
-  }
-
-  function toast(kicker, msg, ms = 1400) {
-    const t = ensureToast();
-    const k = document.getElementById("toast-kicker");
-    const m = document.getElementById("toast-msg");
-    k.textContent = kicker || "";
-    m.textContent = msg || "";
-    t.style.display = "block";
-    clearTimeout(toast._t);
-    toast._t = setTimeout(() => (t.style.display = "none"), ms);
-  }
-
-  // ---------- haptics (best effort) ----------
-  function haptic(kind = "light") {
-    try {
-      if (navigator.vibrate) {
-        navigator.vibrate(kind === "success" ? 20 : 10);
-      }
-    } catch {}
-  }
-
-  // ---------- html safety ----------
-  function escapeHtml(text) {
+  function escapeHtml(value) {
     const div = document.createElement("div");
-    div.textContent = text == null ? "" : String(text);
+    div.textContent = String(value ?? "");
     return div.innerHTML;
   }
 
-  function encodeAction(action) {
-    try { return encodeURIComponent(JSON.stringify(action || {})); }
-    catch { return encodeURIComponent("{}"); }
-  }
-  function decodeAction(encoded) {
-    try { return JSON.parse(decodeURIComponent(encoded || "%7B%7D")); }
-    catch { return {}; }
+  function safeAction(action) {
+    try {
+      return JSON.stringify(action || {});
+    } catch {
+      return "{}";
+    }
   }
 
-  // ---------- topbar ----------
-  function topbarHtml(title) {
-  return `
-    <div class="topbar">
-      <div class="topbar-inner">
-        <button class="topbar-btn" data-ui="home">Home</button>
-        <div class="topbar-title">${escapeHtml(title || "")}</div>
+  function toast(text, ok = true, titleOverride = null) {
+    let banner = document.getElementById("dashmsg-toast");
+    if (!banner) {
+      banner = document.createElement("div");
+      banner.id = "dashmsg-toast";
+      banner.className = "toast";
+      banner.innerHTML = '<div class="toast-title"></div><div class="toast-msg"></div>';
+      document.body.appendChild(banner);
+    }
+
+    const title = titleOverride || (ok ? "Copied" : "Error");
+    banner.classList.toggle("ok", !!ok);
+    banner.classList.toggle("error", !ok);
+    banner.querySelector(".toast-title").textContent = title;
+    banner.querySelector(".toast-msg").textContent = String(text ?? "");
+    banner.classList.add("show");
+
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => banner.classList.remove("show"), 1800);
+
+    try {
+      if (navigator.vibrate) navigator.vibrate(25);
+    } catch {}
+  }
+
+  function bottomNavHtml() {
+    if (currentScreen === "main") return "";
+    return `
+      <div class="list bottom-nav">
+        <button class="row back" data-action='{"type":"navBack"}'>Back</button>
+        <button class="row" data-action='{"type":"home"}'>Home</button>
       </div>
-    </div>
-  `;
-}
-  // ---------- render ----------
-  function renderScreen(title, sections, opts = {}) {
+    `;
+  }
+
+  function renderScreen(title, sections = []) {
     if (!app) return;
 
-    const subtitle = opts.subtitle || "";
-    let html = topbarHtml(title, subtitle);
+    let html = `<h1>${escapeHtml(title || "DashMsg")}</h1>`;
 
-    (sections || []).forEach((section) => {
+    sections.forEach((section) => {
       if (section.header) html += `<div class="menu-title">${escapeHtml(section.header)}</div>`;
-
-      const items = section.items || [];
-      html += `<div class="list">`;
-
-      items.forEach((item) => {
-        const cls = item.class ? ` ${escapeHtml(item.class)}` : "";
-        const action = item.action ? item.action : (item.click ? { type: "raw", handler: item.click } : { type: "noop" });
-
-        // optional “status pill” for toggles
-        let pill = "";
-        if (item.pill === "pref" && item.prefKey) {
-          const v = !!window.DashMsg?.getPref?.(item.prefKey);
-          pill = `<span class="pill ${v ? "on" : "off"}">${v ? "ON" : "OFF"}</span>`;
+      html += '<div class="list">';
+      (section.items || []).forEach((item) => {
+        if (item.static) {
+          html += `<div class="row static-row"><span>${escapeHtml(item.label)}</span></div>`;
+          return;
         }
 
-        const more = item.more ? `<span class="chev">›</span>` : `<span class="chev"></span>`;
-
-        html += `
-          <button class="row${cls}" data-action="${encodeAction(action)}">
-            <span class="row-label">${escapeHtml(item.label)}${pill}</span>
-            ${more}
-          </button>
-        `;
+        const more = item.more ? "<span class=\"chev\">›</span>" : "";
+        const cls = item.class ? ` ${escapeHtml(item.class)}` : "";
+        html += `<button class="row${cls}" data-action='${safeAction(item.action)}'><span>${escapeHtml(item.label)}</span>${more}</button>`;
       });
-
-      html += `</div>`;
+      html += "</div>";
     });
 
+    html += bottomNavHtml();
     app.innerHTML = html;
-
-    // delegated click handling
-    app.onclick = (ev) => {
-      const btn = ev.target.closest("button.row, button.topbar-btn");
-      if (!btn) return;
-
-      const ui = btn.getAttribute("data-ui");
-      if (ui === "home") return goHome();
-     
-
-      if (btn.classList.contains("row")) {
-        const action = decodeAction(btn.getAttribute("data-action"));
-        runAction(action);
-      }
-    };
   }
 
-  // ---------- nav ----------
-  function navigateTo(screenName, { push = true } = {}) {
-    const menu = window.DashMsgMenus?.[screenName];
-    if (!menu) return console.error("DashMsgUI: menu not found:", screenName);
-    if (push) window.DashMsg?.pushNav?.(screenName);
-
-    // subtle helpful subtitles
-    const subtitleMap = {
-    };
-
-    renderScreen(menu.title, menu.sections, { subtitle: subtitleMap[screenName] || "" });
-  }
-
-  function goHome() {
-    try { while (window.DashMsg?.getNavDepth?.() > 0) window.DashMsg.popNav(); } catch {}
-    navigateTo("main", { push: true });
-  }
-
-  function navBack() {
-    window.DashMsg?.popNav?.();
-    const stack = window.DashMsg?.navStack?.() || [];
-    if (!stack.length) return navigateTo("main", { push: true });
-    navigateTo(stack[stack.length - 1], { push: false });
-  }
-
-  // ---------- action runner ----------
-  function runFunctionString(code) {
-    if (!code) return;
-    try { (new Function(code))(); }
-    catch (e) { console.error(e); alert(e?.message || String(e)); }
-  }
-
-  function runAction(action) {
+  function dispatchAction(action) {
     if (!action || typeof action !== "object") return;
+
+    const FN = {
+      setETA,
+      showTemplateEditor: () => window.DashMsgEditors?.showTemplateEditor(),
+      showStoreEditor: () => window.DashMsgEditors?.showStoreEditor(),
+      resetAll: () => window.DashMsgEditors?.resetAll(),
+      editTemplate: () => window.DashMsgEditors?.editTemplate(action.key),
+      saveTemplate: () => window.DashMsgEditors?.saveTemplate(action.key),
+      resetTemplate: () => window.DashMsgEditors?.resetTemplate(action.key),
+      editStore: () => window.DashMsgEditors?.editStore(action.idx),
+      updateStore: () => window.DashMsgEditors?.updateStore(action.idx),
+      removeStore: () => window.DashMsgEditors?.removeStore(action.idx),
+      addStore: () => window.DashMsgEditors?.addStore(),
+      saveNewStore: () => window.DashMsgEditors?.saveNewStore(),
+      openBeta,
+      beta: openBeta,
+      sendFeedback: openFeedback,
+      exportData,
+      importData,
+      toggleDebug,
+      setEmojiOn: () => setPrefAndRefresh("emoji_on", true),
+      setEmojiOff: () => setPrefAndRefresh("emoji_on", false),
+      setNamePromptOn: () => setPrefAndRefresh("name_prompt", true),
+      setNamePromptOff: () => setPrefAndRefresh("name_prompt", false),
+      submitFeedback,
+      copyTesterId
+    };
 
     switch (action.type) {
       case "template":
-        return useTemplate(action.key, action.category || "Message", action.extras || {});
+        return useTemplate(action.key, action.category, action.extras);
       case "nav":
         return navigateTo(action.screen);
       case "navBack":
         return navBack();
       case "cancel":
-        return exitApp();
+        return window.DashMsg?.exitApp?.();
+      case "home":
+        return goHome();
       case "function":
-      case "raw":
-        return runFunctionString(action.handler);
-      case "togglePref":
-        return togglePref(action.key);
+        if (FN[action.name]) return FN[action.name]();
+        console.error("Unknown function action", action);
+        return toast("Action missing", false);
       default:
-        return;
+        console.error("Unknown action", action);
+        return toast("Action missing", false);
     }
   }
 
-  // ---------- pref toggle (with toast) ----------
-  function togglePref(key) {
-    const ok = window.DashMsg?.togglePref?.(key);
-    if (!ok) return;
+  if (app) {
+    app.addEventListener("click", (e) => {
+      const btn = e.target.closest("button.row");
+      if (!btn) return;
+      let action = null;
+      try {
+        action = JSON.parse(btn.dataset.action || "{}");
+      } catch (err) {
+        console.error("Bad action JSON", err);
+        toast("Action missing", false);
+        return;
+      }
+      dispatchAction(action);
+    });
+  }
 
-    const v = !!window.DashMsg?.getPref?.(key);
-    haptic("light");
-    toast("Setting", `${humanPref(key)}: ${v ? "ON" : "OFF"}`);
+  function navigateTo(screen, options = {}) {
+    const menu = window.DashMsgMenus?.[screen];
+    if (!menu) return;
 
-    // re-render current screen so pills update instantly
+    const push = options.push !== false;
+    if (push) window.DashMsg?.pushNav?.(screen);
+
+    currentScreen = screen;
+    if (screen === "shopping") populateShoppingMenu();
+    renderScreen(menu.title, menu.sections);
+  }
+
+  function navBack() {
+    window.DashMsg?.popNav?.();
     const stack = window.DashMsg?.navStack?.() || [];
-    const cur = stack.length ? stack[stack.length - 1] : "main";
-    navigateTo(cur, { push: false });
+    const prev = stack[stack.length - 1] || "main";
+    navigateTo(prev, { push: false });
   }
 
-  function humanPref(key) {
-    if (key === "emoji_on") return "Emojis";
-    if (key === "name_prompt") return "Name prompt";
-    if (key === "hotbag_default") return "Hot bag default";
-    return key;
+  function goHome() {
+    while ((window.DashMsg?.getNavDepth?.() || 0) > 0) window.DashMsg.popNav();
+    navigateTo("main", { push: true });
   }
 
-  // ---------- messaging ----------
-  async function useTemplate(key, category = "Message", extras = {}) {
-    const template = window.DashMsg?.getTemplate?.(key);
-    if (!template) return console.error("DashMsgUI: template missing:", key);
-
-    haptic("light");
-
-    await window.DashMsg.finishMessage(template, key, category, extras);
-
-    // If running “web only” (no return param), user stays on page → show toast.
-    // If running from Shortcut, it will return immediately anyway.
-    toast("Copied", key);
-    haptic("success");
+  async function useTemplate(key, category = "General", extras = {}) {
+    const tpl = window.DashMsg?.getTemplate?.(key);
+    if (!tpl) {
+      toast("Template missing", false);
+      return;
+    }
+    await window.DashMsg?.finishMessage?.(tpl, key, category, extras);
   }
 
   function setETA() {
     const eta = prompt("ETA? (example: 5 min)");
     if (!eta) return;
-
     const tpl = window.DashMsg?.getTemplate?.("HEADING_WITH_ETA") || "";
-    const msg = window.DashMsg?.renderTemplate?.(tpl, { ETA: eta }) || "";
+    const rendered = window.DashMsg?.renderTemplate?.(tpl, { ETA: eta }) || "";
+    window.DashMsg?.finishMessage?.(rendered, "HEADING_WITH_ETA", "Delivery", { used_eta: 1 });
+  }
 
-    haptic("light");
-    window.DashMsg?.finishMessage?.(msg, "HEADING_WITH_ETA", "Delivery", { used_eta: 1 });
-    toast("Copied", `ETA: ${eta}`);
-    haptic("success");
+  function setPrefAndRefresh(key, value) {
+    window.DashMsg?.setPref?.(key, value);
+    toast("Saved", true, "Saved");
+    navigateTo(currentScreen, { push: false });
   }
 
   function populateShoppingMenu() {
     const menu = window.DashMsgMenus?.shopping;
-    if (!menu || !menu.sections?.length) return;
-
+    if (!menu?.sections?.[0]) return;
     const stores = window.DashMsg?.getStores?.() || [];
-    menu.sections[0].items = (stores || []).map((store) => ({
+    menu.sections[0].items = stores.map((store) => ({
       label: store,
       action: { type: "template", key: "SHOP_SINGLE", category: "Shopping", extras: { store } }
     }));
   }
 
-  // ---------- exit ----------
-  function exitApp() {
-    if (window.DashMsg?.exitApp) return window.DashMsg.exitApp();
-    const params = new URLSearchParams(location.search);
-    const ret = params.get("return");
-    if (ret) { try { location.href = ret; } catch {} return; }
-    try { window.close(); } catch {}
+  function openBeta() {
+    const stack = window.DashMsg?.navStack?.() || [];
+    if (stack[stack.length - 1] !== "beta") window.DashMsg?.pushNav?.("beta");
+    const versions = window.DashMsg?.getVersions?.() || {};
+    const testerId = window.DashMsg?.getTesterId?.() || "unknown";
+    const debugOn = !!window.DashMsg?.isDebug?.();
+
+    currentScreen = "beta";
+    renderScreen("Beta", [
+      {
+        header: "Build",
+        items: [
+          { label: `app_version: ${versions.app_version || "-"}`, static: true },
+          { label: `schema_version: ${versions.schema_version || "-"}`, static: true },
+          { label: `tester_id: ${testerId}`, static: true }
+        ]
+      },
+      {
+        items: [
+          { label: "Copy Tester ID", action: { type: "function", name: "copyTesterId" } },
+          { label: "Send Feedback", action: { type: "function", name: "sendFeedback" } },
+          { label: "Export Data", action: { type: "function", name: "exportData" } },
+          { label: "Import Data", action: { type: "function", name: "importData" } },
+          { label: `Debug: ${debugOn ? "ON" : "OFF"}`, action: { type: "function", name: "toggleDebug" } },
+          { label: "Reset All Data", class: "destructive", action: { type: "function", name: "resetAll" } }
+        ]
+      }
+    ]);
+
+  }
+
+  async function exportData() {
+    const payload = window.DashMsg?.exportState?.();
+    if (!payload) return toast("Export failed", false);
+    const ok = await window.DashMsg?.copyToClipboard?.(payload);
+    toast(ok ? "Export copied" : "Export copy failed", !!ok, ok ? "Copied" : "Error");
+  }
+
+  async function importData() {
+    const raw = prompt("Paste export JSON");
+    if (!raw) return;
+    const result = window.DashMsg?.importState?.(raw);
+    if (result?.ok) {
+      populateShoppingMenu();
+      toast("Imported", true, "Saved");
+      navigateTo("settings", { push: false });
+    } else {
+      toast(result?.error || "Import failed", false);
+    }
+  }
+
+  function toggleDebug() {
+    const next = !window.DashMsg?.isDebug?.();
+    window.DashMsg?.setDebug?.(next);
+    toast(`Debug ${next ? "ON" : "OFF"}`, true, "Saved");
+    openBeta();
+  }
+
+  function openFeedback() {
+    const stack = window.DashMsg?.navStack?.() || [];
+    if (stack[stack.length - 1] !== "feedback") window.DashMsg?.pushNav?.("feedback");
+    currentScreen = "feedback";
+    app.innerHTML = `
+      <h1>Feedback</h1>
+      <div class="list feedback-panel">
+        <div class="feedback-wrap">
+          <textarea id="feedback-input" class="feedback-input" placeholder="Tell us what happened, what you'd like improved, and any ideas."></textarea>
+          <button class="row" data-action='{"type":"function","name":"submitFeedback"}'>Submit</button>
+        </div>
+      </div>
+      <div class="list bottom-nav">
+        <button class="row back" data-action='{"type":"navBack"}'>Back</button>
+      </div>
+    `;
+  }
+
+  async function submitFeedback() {
+    const input = document.getElementById("feedback-input");
+    const message = input?.value?.trim();
+    if (!message) return toast("Please enter feedback", false);
+
+    const res = await window.DashMsg?.sendFeedback?.(message);
+    if (res?.ok) {
+      toast("Feedback sent", true, "Saved");
+      navigateTo("beta", { push: false });
+    } else {
+      toast("Feedback failed", false);
+    }
+  }
+
+  async function copyTesterId() {
+    const tester = window.DashMsg?.getTesterId?.() || "";
+    const ok = await window.DashMsg?.copyToClipboard?.(tester);
+    toast(ok ? "Tester ID copied" : "Copy failed", !!ok);
   }
 
   return {
@@ -246,13 +302,21 @@ const DashMsgUI = (() => {
     navigateTo,
     navBack,
     goHome,
-    runAction,
+    dispatchAction,
     useTemplate,
     setETA,
-    populateShoppingMenu,
-    togglePref,
     toast,
-    haptic,
+    openBeta,
+    openFeedback,
+    exportData,
+    importData,
+    toggleDebug,
+    populateShoppingMenu,
+    setEmojiOn: () => setPrefAndRefresh("emoji_on", true),
+    setEmojiOff: () => setPrefAndRefresh("emoji_on", false),
+    setNamePromptOn: () => setPrefAndRefresh("name_prompt", true),
+    setNamePromptOff: () => setPrefAndRefresh("name_prompt", false),
+    copyTesterId
   };
 })();
 
