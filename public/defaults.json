@@ -1,25 +1,27 @@
 {
   "schema_version": 1,
-  "app_version": "0.1.0",
-  "stores": ["Dollar General", "Food Lion", "Lowes Foods", "Walgreens", "CVS"],
+  "app_version": "2.0.0",
+  "stores": [
+    "Dollar General",
+    "Food Lion",
+    "Lowes Foods",
+    "Walgreens",
+    "CVS"
+  ],
   "templates": {
-    "ARRIVED_WORKING": "Hi! I’ve arrived at the restaurant and they’re working on your order. I’ll be on my way shortly.",
-    "ARRIVED_FEW_MINUTES": "Hi! I’ve arrived at the restaurant and they’re still finishing up your order. It may take a few extra minutes, but I’ll head your way as soon as it’s ready 🚗",
-
-    "STOPS_ONE_HOTBAG": "Hi! I’m at the restaurant now waiting on your order. I have one quick stop before heading straight to you, and I’ll keep your food in a hot bag! 🔥",
-    "STOPS_ONE_NOHOTBAG": "Hi! I’m at the restaurant now waiting on your order. I have one quick stop before heading straight to you.",
-    "STOPS_COUPLE_HOTBAG": "Hi! I’m at the restaurant now waiting on your order. I have a couple quick stops before heading straight to you, and I’ll keep your food in a hot bag! 🔥",
-    "STOPS_COUPLE_NOHOTBAG": "Hi! I’m at the restaurant now waiting on your order. I have a couple quick stops before heading straight to you.",
-
+    "ARRIVED_WORKING": "Hi! I\u2019ve arrived at the restaurant and they\u2019re working on your order. I\u2019ll be on my way shortly.",
+    "ARRIVED_FEW_MINUTES": "Hi! I\u2019ve arrived at the restaurant and they\u2019re still finishing up your order. It may take a few extra minutes, but I\u2019ll head your way as soon as it\u2019s ready \ud83d\ude97",
+    "STOPS_ONE_HOTBAG": "Hi! I\u2019m at the restaurant now waiting on your order. I have one quick stop before heading straight to you, and I\u2019ll keep your food in a hot bag! \ud83d\udd25",
+    "STOPS_ONE_NOHOTBAG": "Hi! I\u2019m at the restaurant now waiting on your order. I have one quick stop before heading straight to you.",
+    "STOPS_COUPLE_HOTBAG": "Hi! I\u2019m at the restaurant now waiting on your order. I have a couple quick stops before heading straight to you, and I\u2019ll keep your food in a hot bag! \ud83d\udd25",
+    "STOPS_COUPLE_NOHOTBAG": "Hi! I\u2019m at the restaurant now waiting on your order. I have a couple quick stops before heading straight to you.",
     "HEADING_NO_ETA": "Heading your way now.",
     "HEADING_WITH_ETA": "Heading your way now. ETA around {ETA}.",
-    "TRAFFIC_DELAY": "Just a heads up — I’ve hit some traffic, but I’m on the way.",
-
-    "SHOP_SINGLE": "Hi! I’m at {STORE} getting started on your order 🛒 Please keep your phone nearby in case I need to check on a substitution.",
-    "SHOP_MULTIPLE": "Hi! I’m at {STORE} getting started on your order 🛒 I’m shopping a couple orders right now. Please keep your phone nearby in case I need to check on a substitution.",
-    "NO_RESPONSE_REPLACE": "I haven’t heard back, so I’ll replace any missing item(s) with a close substitute.",
-
-    "DELIVERED_FOOD": "Your order has been delivered. Enjoy! 🍽️",
+    "TRAFFIC_DELAY": "Just a heads up \u2014 I\u2019ve hit some traffic, but I\u2019m on the way.",
+    "SHOP_SINGLE": "Hi! I\u2019m at {STORE} getting started on your order \ud83d\uded2 Please keep your phone nearby in case I need to check on a substitution.",
+    "SHOP_MULTIPLE": "Hi! I\u2019m at {STORE} getting started on your order \ud83d\uded2 I\u2019m shopping a couple orders right now. Please keep your phone nearby in case I need to check on a substitution.",
+    "NO_RESPONSE_REPLACE": "I haven\u2019t heard back, so I\u2019ll replace any missing item(s) with a close substitute.",
+    "DELIVERED_FOOD": "Your order has been delivered. Enjoy! \ud83c\udf7d\ufe0f",
     "DELIVERED_SHOP": "Your order has been delivered. Thank you!",
     "THANKS": "Thank you for your order! Have a great rest of your day!"
   }

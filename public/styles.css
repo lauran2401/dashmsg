@@ -349,3 +349,57 @@ textarea{
 @supports (-webkit-touch-callout: none){
   .row{ padding-top: 17px; padding-bottom: 17px; }
 }
+.section{
+margin-bottom:22px;
+}
+
+.section-title{
+font-size:13px;
+font-weight:600;
+color:#777;
+margin:8px 4px;
+text-transform:uppercase;
+letter-spacing:.06em;
+}
+
+.template-row{
+display:flex;
+align-items:center;
+justify-content:space-between;
+padding:16px 14px;
+}
+
+.tpl-main{
+display:flex;
+flex-direction:column;
+}
+
+.tpl-title{
+font-size:16px;
+font-weight:600;
+}
+
+.tpl-sub{
+font-size:12px;
+color:#888;
+margin-top:2px;
+}
+
+.scroll-area{
+overflow-y:auto;
+max-height:calc(100vh - 160px);
+padding-right:6px;
+}
+
+.scroll-area::-webkit-scrollbar{
+width:6px;
+}
+
+.scroll-area::-webkit-scrollbar-thumb{
+background:#ccc;
+border-radius:6px;
+}
+
+.scroll-area::-webkit-scrollbar-track{
+background:transparent;
+}

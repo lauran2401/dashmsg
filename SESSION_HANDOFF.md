@@ -52,7 +52,7 @@ The frontend currently sends header `x-dashmsg-key` using hard-coded key:
 
 ### API endpoints expect
 - `/api/log`, `/api/error`, `/api/feedback`: `env.DASHMSG_API_KEY`
-- `/api/beta-report`: `env.DASHMSG_KEY` (different var name from other routes)
+- `/api/beta-report`: `env.DASHMSG_API_KEY` (different var name from other routes)
 
 ### `wrangler.toml` currently binds
 - D1 binding `DB`
@@ -99,7 +99,7 @@ Beta/help screen includes:
    - `style.css` likely stale/legacy reference.
 
 3. **API secret naming inconsistency**
-   - Most endpoints use `DASHMSG_API_KEY`, but `/api/beta-report` uses `DASHMSG_KEY`.
+   - Most endpoints use `DASHMSG_API_KEY`, but `/api/beta-report` uses `DASHMSG_API_KEY`.
    - Easy source of deployment misconfiguration.
 
 4. **Hard-coded client API key**

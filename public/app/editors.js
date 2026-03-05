@@ -1,3 +1,5 @@
+import { API_HEADERS } from "./config.js";
+
 const DashMsgEditors = (() => {
   const app = document.getElementById("app");
 
@@ -7,21 +9,60 @@ const DashMsgEditors = (() => {
     return div.innerHTML;
   }
 
+function label(key) {
+  return key
+    .toLowerCase()
+    .split("_")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ")
+    .replace(" Hotbag", " (Hot Bag)");
+}
+
+function group(key) {
+  if (key.startsWith("ARRIVED")) return "Arrival";
+  if (key.startsWith("STOPS")) return "Stacked Orders";
+  if (key.startsWith("HEADING")) return "En Route";
+  if (key.startsWith("TRAFFIC")) return "Delays";
+  if (key.startsWith("SHOP")) return "Shopping";
+  return "Other";
+}
+
   function action(obj) {
     return JSON.stringify(obj);
   }
 
   function showTemplateEditor() {
     const templates = window.DashMsg?.defaults?.().templates || {};
-    const rows = Object.keys(templates).map((key) => `
-      <button class="row" data-action='${action({ type: "function", name: "editTemplate", key })}'>
-        <span>${esc(key)}</span><span class="chev">›</span>
+    const grouped = {};
+
+    Object.keys(templates).forEach((k) => {
+      const g = group(k);
+      if (!grouped[g]) grouped[g] = [];
+      grouped[g].push(k);
+    });
+
+    const sections = Object.keys(grouped).map((g) => {
+      const rows = grouped[g].map((key) => `
+      <button class="row template-row" data-action='${action({ type: "function", name: "editTemplate", key })}'>
+        <div class="tpl-main">
+          <div class="tpl-title">${esc(label(key))}</div>
+          <div class="tpl-sub">${esc(key)}</div>
+        </div>
+        <span class="chev">›</span>
       </button>
-    `).join("");
+      `).join("");
+
+      return `
+      <div class="section">
+        <div class="section-title">${g}</div>
+        <div class="list">${rows}</div>
+      </div>
+      `;
+    }).join("");
 
     app.innerHTML = `
-      <h1>Edit Templates</h1>
-      <div class="list">${rows}</div>
+      <h1>Message Templates</h1>
+      <div class="scroll-area">${sections}</div>
       <div class="list bottom-nav">
         <button class="row back" data-action='${action({ type: "nav", screen: "settings" })}'>Back</button>
         <button class="row" data-action='${action({ type: "home" })}'>Home</button>
@@ -34,7 +75,8 @@ const DashMsgEditors = (() => {
     const current = window.DashMsg?.getTemplate?.(key) || "";
 
     app.innerHTML = `
-      <h1>${esc(key)}</h1>
+      <h1>${esc(label(key))}</h1>
+      <div class="beta-meta">${esc(key)}</div>
       <div class="list feedback-panel">
         <div class="feedback-wrap">
           <textarea id="tpl-input" class="feedback-input">${esc(current)}</textarea>
