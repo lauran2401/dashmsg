@@ -33,15 +33,13 @@ CREATE TABLE IF NOT EXISTS errors (
 CREATE INDEX IF NOT EXISTS idx_errors_ts ON errors(ts);
 CREATE INDEX IF NOT EXISTS idx_errors_tester ON errors(tester_id);
 
-CREATE TABLE IF NOT EXISTS feedback (
-  id TEXT PRIMARY KEY,
-  ts INTEGER NOT NULL,
-  tester_id TEXT,
-  app_version TEXT,
-  schema_version INTEGER,
-  notes TEXT,
-  templates_json TEXT
+CREATE TABLE IF NOT EXISTS feedback(
+ id INTEGER PRIMARY KEY AUTOINCREMENT,
+ tester_id TEXT,
+ message TEXT,
+ template TEXT,
+ created_at TEXT
 );
 
-CREATE INDEX IF NOT EXISTS idx_feedback_ts ON feedback(ts);
 CREATE INDEX IF NOT EXISTS idx_feedback_tester ON feedback(tester_id);
+CREATE INDEX IF NOT EXISTS idx_feedback_created ON feedback(created_at);

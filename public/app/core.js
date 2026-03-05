@@ -1,5 +1,6 @@
+import { API_HEADERS } from "./config.js";
+
 const DashMsg = (() => {
-  const API_KEY = "DashMaster_2026!";
   const DEFAULTS_URL = "./defaults.json";
   const STORAGE_KEY = "dashmsg_state";
   const TESTER_ID_KEY = "dashmsg_tester_id";
@@ -25,7 +26,8 @@ const DashMsg = (() => {
     },
     session: {
       customerName: ""
-    }
+    },
+    tester_id: "unknown"
   };
 
   function saveState() {
@@ -55,7 +57,39 @@ const DashMsg = (() => {
         state.overrides.stores = Array.isArray(defaults.stores) ? [...defaults.stores] : [];
       }
 
+      state.tester_id = getTesterId();
       saveState();
+
+      window.addEventListener("error", async (e) => {
+        try {
+          await fetch("/api/error", {
+            method: "POST",
+            headers: API_HEADERS,
+            body: JSON.stringify({
+              tester_id: state?.tester_id || "unknown",
+              message: e.message,
+              stack: e.error?.stack || "",
+              url: location.href
+            })
+          });
+        } catch {}
+      });
+
+      window.addEventListener("unhandledrejection", async (e) => {
+        try {
+          await fetch("/api/error", {
+            method: "POST",
+            headers: API_HEADERS,
+            body: JSON.stringify({
+              tester_id: state?.tester_id || "unknown",
+              message: "Unhandled promise rejection",
+              stack: String(e.reason),
+              url: location.href
+            })
+          });
+        } catch {}
+      });
+
       return true;
     } catch (err) {
       console.error("Failed to load defaults", err);
@@ -161,7 +195,7 @@ const DashMsg = (() => {
       const versions = getVersions();
       await fetch(API_LOG_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-dashmsg-key": API_KEY },
+        headers: API_HEADERS,
         body: JSON.stringify({
           tester_id: getTesterId(),
           source,
@@ -192,7 +226,7 @@ const DashMsg = (() => {
 
       const res = await fetch(API_FB_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-dashmsg-key": API_KEY },
+        headers: API_HEADERS,
         body: JSON.stringify(payload)
       });
       return { ok: res.ok };
@@ -297,6 +331,19 @@ const DashMsg = (() => {
     return navStack.length;
   }
 
+  async function checkUpdate() {
+    const r = await fetch("./defaults.json", { cache: "no-store" });
+    const d = await r.json();
+    const local = state?.app_version || null;
+
+    if (local && local !== d.app_version) {
+      alert("DashMsg updated to " + d.app_version);
+    }
+
+    state.app_version = d.app_version;
+    localStorage.setItem("dashmsg_state", JSON.stringify(state));
+  }
+
   async function init() {
     const ok = await loadDefaults();
     if (!ok) {
@@ -304,6 +351,10 @@ const DashMsg = (() => {
       if (app) app.innerHTML = "<pre style='padding:12px'>Failed to load defaults.json</pre>";
       return;
     }
+
+    try {
+      await checkUpdate();
+    } catch {}
 
     window.DashMsgUI?.populateShoppingMenu?.();
     window.DashMsgUI?.navigateTo?.("main", { push: true });

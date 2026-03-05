@@ -1,3 +1,5 @@
+import { API_HEADERS } from "./config.js";
+
 // public/app/ui.js — fixed (Home upper-left, Back only at bottom, no broken braces)
 
 const DashMsgUI = (() => {
@@ -290,7 +292,8 @@ const DashMsgUI = (() => {
   ----------------------- */
   function openBeta() {
     const versions = window.DashMsg?.getVersions?.() || {};
-    const testerId = window.DashMsg?.getTesterId?.() || "unknown";
+    const state = window.DashMsg?.state?.() || {};
+    const testerId = state.tester_id || "unknown";
 
     currentScreen = "beta";
 
@@ -311,7 +314,7 @@ const DashMsgUI = (() => {
       {
         header: "App Info",
         items: [
-          { label: `Version: ${versions.app_version || "-"}`, static: true },
+          { label: `App Version: ${versions.app_version || "-"}`, static: true },
           { label: `Tester ID: ${testerId}`, static: true },
           { label: "Copy Tester ID", action: { type: "function", name: "copyTesterId" } }
         ]

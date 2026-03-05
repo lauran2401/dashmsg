@@ -4,15 +4,15 @@ export async function onRequestPost({ request, env }) {
     return new Response("Unauthorized", { status: 401 });
   }
 
-  const origin = request.headers.get("Origin") || "";
-  const allowed = env.ALLOWED_ORIGIN || "";
-  if (allowed && origin && origin !== allowed) {
-    return new Response("Forbidden origin", { status: 403 });
-  }
+  const length = request.headers.get("content-length");
+  if (length && Number(length) > 10000) return new Response("Payload too large", { status: 413 });
 
-  let body;
-  try { body = await request.json(); }
-  catch { return new Response("Bad JSON", { status: 400 }); }
+  let body = {};
+  try { body = await request.json(); } catch {}
+  if (!body || typeof body !== "object") return new Response("Bad Request", { status: 400 });
+
+  const origin = request.headers.get("origin") || "";
+  if (!origin.includes("pages.dev")) return new Response("Forbidden", { status: 403 });
 
   const now = Date.now();
   const id = crypto.randomUUID();
