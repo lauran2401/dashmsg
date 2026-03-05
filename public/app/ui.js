@@ -64,15 +64,14 @@ const DashMsgUI = (() => {
 
   function headerHtml(title) {
 
-    if (currentScreen === "main") {
-      return `
-        <div class="nav-bar">
-          <div class="nav-spacer"></div>
-          <div class="nav-title">${escapeHtml(title)}</div>
-          <div class="nav-spacer"></div>
-        </div>
-      `;
-    }
+  return `
+    <div class="nav-bar">
+      <button class="nav-btn home" data-action='{"type":"home"}'>Home</button>
+      <div class="nav-title">${escapeHtml(title)}</div>
+      <div class="nav-spacer"></div>
+    </div>
+  `;
+}
 
     return `
       <div class="nav-bar">
