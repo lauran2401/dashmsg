@@ -125,6 +125,13 @@ const DashMsgUI = (() => {
       html += `</div>`;
 
     });
+    if (currentScreen !== "main") {
+  html += `
+    <div class="list bottom-back">
+      <button class="row back" data-action='{"type":"navBack"}'>Back</button>
+    </div>
+  `;
+}
 
     app.innerHTML = html;
   }
