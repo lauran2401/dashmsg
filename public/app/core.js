@@ -211,29 +211,56 @@ const DashMsg = (() => {
     }
   }
 
-  async function sendFeedback(message) {
-    try {
-      const versions = getVersions();
-      const payload = {
+  async function sendFeedback(payload) {
+    const body = typeof payload === "string"
+      ? { tester_id: getTesterId(), message: payload }
+      : {
         tester_id: getTesterId(),
-        source,
-        app_version: versions.app_version,
-        schema_version: versions.schema_version,
-        message,
-        url: location.href,
-        ts: new Date().toISOString()
+        message: JSON.stringify(payload),
+        suggestion_id: payload?.suggestion_id || null,
+        suggestion_title: payload?.suggestion_title || null,
+        custom_text: payload?.custom_text || "",
+        route: payload?.route || location.pathname,
+        screen: payload?.screen || null,
+        timestamp: payload?.timestamp || Date.now(),
+        app_version: payload?.app_version || getVersions().app_version,
+        platform: payload?.platform || navigator.platform || null,
+        device: payload?.device || navigator.userAgent || null,
+        browser: payload?.browser || navigator.userAgent || null,
+        debug_data: payload?.debug_data || null
       };
 
-      const res = await fetch(API_FB_URL, {
-        method: "POST",
-        headers: API_HEADERS,
-        body: JSON.stringify(payload)
-      });
-      return { ok: res.ok };
-    } catch (err) {
-      if (isDebug()) console.error("feedback failed", err);
-      return { ok: false };
+    const r = await fetch(API_FB_URL, {
+      method: "POST",
+      headers: API_HEADERS,
+      body: JSON.stringify(body)
+    });
+
+    if (!r.ok) throw new Error("feedback_failed");
+    return true;
+  }
+
+  async function flushFeedbackQueue() {
+    const q = (() => {
+      try {
+        return JSON.parse(localStorage.getItem("dashmsg_beta_queue") || "[]");
+      } catch {
+        return [];
+      }
+    })();
+
+    if (!q.length) return;
+
+    const keep = [];
+    for (const payload of q) {
+      try {
+        await sendFeedback(payload);
+      } catch {
+        keep.push(payload);
+      }
     }
+
+    localStorage.setItem("dashmsg_beta_queue", JSON.stringify(keep));
   }
 
   async function finishMessage(msg, key, category, extras = {}) {
@@ -356,8 +383,11 @@ const DashMsg = (() => {
       await checkUpdate();
     } catch {}
 
+    await flushFeedbackQueue();
+
     window.DashMsgUI?.populateShoppingMenu?.();
     window.DashMsgUI?.navigateTo?.("main", { push: true });
+    window.DashMsgUI?.initFeedbackCommandPalette?.();
   }
 
   return {
