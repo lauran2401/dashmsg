@@ -1,4 +1,5 @@
 const DashMsgUI = (() => {
+
   const app = document.getElementById("app");
   let currentScreen = "main";
   let toastTimer = null;
@@ -17,307 +18,466 @@ const DashMsgUI = (() => {
     }
   }
 
+  /* -----------------------
+     TOAST
+  ----------------------- */
+
   function toast(text, ok = true, titleOverride = null) {
+
     let banner = document.getElementById("dashmsg-toast");
+
     if (!banner) {
       banner = document.createElement("div");
       banner.id = "dashmsg-toast";
       banner.className = "toast";
-      banner.innerHTML = '<div class="toast-title"></div><div class="toast-msg"></div>';
+      banner.innerHTML = `
+        <div class="toast-title"></div>
+        <div class="toast-msg"></div>
+      `;
       document.body.appendChild(banner);
     }
 
-    const title = titleOverride || (ok ? "Copied" : "Error");
+    const title = titleOverride || (ok ? "✓ Message Copied" : "Error");
+
     banner.classList.toggle("ok", !!ok);
     banner.classList.toggle("error", !ok);
+
     banner.querySelector(".toast-title").textContent = title;
     banner.querySelector(".toast-msg").textContent = String(text ?? "");
+
     banner.classList.add("show");
 
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => banner.classList.remove("show"), 1800);
+
+    toastTimer = setTimeout(() => {
+      banner.classList.remove("show");
+    }, 2600);
 
     try {
-      if (navigator.vibrate) navigator.vibrate(25);
+      if (navigator.vibrate) navigator.vibrate(40);
     } catch {}
   }
 
-  function bottomNavHtml() {
-    if (currentScreen === "main") return "";
+  /* -----------------------
+     HEADER
+  ----------------------- */
+
+  function headerHtml(title) {
+
+    if (currentScreen === "main") {
+      return `
+        <div class="nav-bar">
+          <div class="nav-spacer"></div>
+          <div class="nav-title">${escapeHtml(title)}</div>
+          <div class="nav-spacer"></div>
+        </div>
+      `;
+    }
+
     return `
-      <div class="list bottom-nav">
-        <button class="row back" data-action='{"type":"navBack"}'>Back</button>
-        <button class="row" data-action='{"type":"home"}'>Home</button>
+      <div class="nav-bar">
+        <button class="nav-btn back" data-action='{"type":"navBack"}'>‹</button>
+        <div class="nav-title">${escapeHtml(title)}</div>
+        <button class="nav-btn home" data-action='{"type":"home"}'>Home</button>
       </div>
     `;
   }
 
+  /* -----------------------
+     RENDER SCREEN
+  ----------------------- */
+
   function renderScreen(title, sections = []) {
+
     if (!app) return;
 
-    let html = `<h1>${escapeHtml(title || "DashMsg")}</h1>`;
+    let html = headerHtml(title);
 
     sections.forEach((section) => {
-      if (section.header) html += `<div class="menu-title">${escapeHtml(section.header)}</div>`;
-      html += '<div class="list">';
+
+      if (section.header) {
+        html += `<div class="menu-title">${escapeHtml(section.header)}</div>`;
+      }
+
+      html += `<div class="list">`;
+
       (section.items || []).forEach((item) => {
+
         if (item.static) {
-          html += `<div class="row static-row"><span>${escapeHtml(item.label)}</span></div>`;
+          html += `
+            <div class="row static-row">
+              <span>${escapeHtml(item.label)}</span>
+            </div>
+          `;
           return;
         }
 
-        const more = item.more ? "<span class=\"chev\">›</span>" : "";
+        const more = item.more ? `<span class="chev">›</span>` : "";
         const cls = item.class ? ` ${escapeHtml(item.class)}` : "";
-        html += `<button class="row${cls}" data-action='${safeAction(item.action)}'><span>${escapeHtml(item.label)}</span>${more}</button>`;
+
+        html += `
+          <button class="row${cls}" data-action='${safeAction(item.action)}'>
+            <span>${escapeHtml(item.label)}</span>
+            ${more}
+          </button>
+        `;
       });
-      html += "</div>";
+
+      html += `</div>`;
+
     });
 
-    html += bottomNavHtml();
     app.innerHTML = html;
   }
 
+  /* -----------------------
+     ACTION DISPATCH
+  ----------------------- */
+
   function dispatchAction(action) {
+
     if (!action || typeof action !== "object") return;
 
     const FN = {
+
       setETA,
+
       showTemplateEditor: () => window.DashMsgEditors?.showTemplateEditor(),
       showStoreEditor: () => window.DashMsgEditors?.showStoreEditor(),
       resetAll: () => window.DashMsgEditors?.resetAll(),
+
       editTemplate: () => window.DashMsgEditors?.editTemplate(action.key),
       saveTemplate: () => window.DashMsgEditors?.saveTemplate(action.key),
       resetTemplate: () => window.DashMsgEditors?.resetTemplate(action.key),
+
       editStore: () => window.DashMsgEditors?.editStore(action.idx),
       updateStore: () => window.DashMsgEditors?.updateStore(action.idx),
       removeStore: () => window.DashMsgEditors?.removeStore(action.idx),
+
       addStore: () => window.DashMsgEditors?.addStore(),
       saveNewStore: () => window.DashMsgEditors?.saveNewStore(),
+
       openBeta,
-      beta: openBeta,
       sendFeedback: openFeedback,
       exportData,
       importData,
-      toggleDebug,
+
+      copyTesterId,
+
       setEmojiOn: () => setPrefAndRefresh("emoji_on", true),
       setEmojiOff: () => setPrefAndRefresh("emoji_on", false),
       setNamePromptOn: () => setPrefAndRefresh("name_prompt", true),
       setNamePromptOff: () => setPrefAndRefresh("name_prompt", false),
-      submitFeedback,
-      copyTesterId
+
+      submitFeedback
     };
 
     switch (action.type) {
+
       case "template":
         return useTemplate(action.key, action.category, action.extras);
+
       case "nav":
         return navigateTo(action.screen);
+
       case "navBack":
         return navBack();
+
       case "cancel":
         return window.DashMsg?.exitApp?.();
+
       case "home":
         return goHome();
+
       case "function":
         if (FN[action.name]) return FN[action.name]();
-        console.error("Unknown function action", action);
         return toast("Action missing", false);
+
       default:
-        console.error("Unknown action", action);
         return toast("Action missing", false);
     }
   }
 
   if (app) {
     app.addEventListener("click", (e) => {
-      const btn = e.target.closest("button.row");
+
+      const btn = e.target.closest("button.row, button.nav-btn");
+
       if (!btn) return;
+
       let action = null;
+
       try {
         action = JSON.parse(btn.dataset.action || "{}");
-      } catch (err) {
-        console.error("Bad action JSON", err);
-        toast("Action missing", false);
-        return;
+      } catch {
+        return toast("Action missing", false);
       }
+
       dispatchAction(action);
+
     });
   }
 
+  /* -----------------------
+     NAVIGATION
+  ----------------------- */
+
   function navigateTo(screen, options = {}) {
+
     const menu = window.DashMsgMenus?.[screen];
+
     if (!menu) return;
 
     const push = options.push !== false;
+
     if (push) window.DashMsg?.pushNav?.(screen);
 
     currentScreen = screen;
+
     if (screen === "shopping") populateShoppingMenu();
+
     renderScreen(menu.title, menu.sections);
   }
 
   function navBack() {
+
     window.DashMsg?.popNav?.();
+
     const stack = window.DashMsg?.navStack?.() || [];
+
     const prev = stack[stack.length - 1] || "main";
+
     navigateTo(prev, { push: false });
   }
 
   function goHome() {
-    while ((window.DashMsg?.getNavDepth?.() || 0) > 0) window.DashMsg.popNav();
+
+    while ((window.DashMsg?.getNavDepth?.() || 0) > 0) {
+      window.DashMsg.popNav();
+    }
+
     navigateTo("main", { push: true });
   }
 
+  /* -----------------------
+     TEMPLATE ACTION
+  ----------------------- */
+
   async function useTemplate(key, category = "General", extras = {}) {
+
     const tpl = window.DashMsg?.getTemplate?.(key);
-    if (!tpl) {
-      toast("Template missing", false);
-      return;
-    }
+
+    if (!tpl) return toast("Template missing", false);
+
     await window.DashMsg?.finishMessage?.(tpl, key, category, extras);
   }
 
+  /* -----------------------
+     ETA
+  ----------------------- */
+
   function setETA() {
+
     const eta = prompt("ETA? (example: 5 min)");
+
     if (!eta) return;
+
     const tpl = window.DashMsg?.getTemplate?.("HEADING_WITH_ETA") || "";
+
     const rendered = window.DashMsg?.renderTemplate?.(tpl, { ETA: eta }) || "";
-    window.DashMsg?.finishMessage?.(rendered, "HEADING_WITH_ETA", "Delivery", { used_eta: 1 });
+
+    window.DashMsg?.finishMessage?.(
+      rendered,
+      "HEADING_WITH_ETA",
+      "Delivery",
+      { used_eta: 1 }
+    );
   }
 
   function setPrefAndRefresh(key, value) {
+
     window.DashMsg?.setPref?.(key, value);
+
     toast("Saved", true, "Saved");
+
     navigateTo(currentScreen, { push: false });
   }
 
+  /* -----------------------
+     SHOPPING
+  ----------------------- */
+
   function populateShoppingMenu() {
+
     const menu = window.DashMsgMenus?.shopping;
+
     if (!menu?.sections?.[0]) return;
+
     const stores = window.DashMsg?.getStores?.() || [];
+
     menu.sections[0].items = stores.map((store) => ({
       label: store,
-      action: { type: "template", key: "SHOP_SINGLE", category: "Shopping", extras: { store } }
+      action: {
+        type: "template",
+        key: "SHOP_SINGLE",
+        category: "Shopping",
+        extras: { store }
+      }
     }));
   }
 
+  /* -----------------------
+     BETA / HELP
+  ----------------------- */
+
   function openBeta() {
-    const stack = window.DashMsg?.navStack?.() || [];
-    if (stack[stack.length - 1] !== "beta") window.DashMsg?.pushNav?.("beta");
+
     const versions = window.DashMsg?.getVersions?.() || {};
     const testerId = window.DashMsg?.getTesterId?.() || "unknown";
-    const debugOn = !!window.DashMsg?.isDebug?.();
 
     currentScreen = "beta";
-    renderScreen("Beta", [
+
+    renderScreen("Help & Testing", [
+
       {
-        header: "Build",
+        header: "Need Help?",
         items: [
-          { label: `app_version: ${versions.app_version || "-"}`, static: true },
-          { label: `schema_version: ${versions.schema_version || "-"}`, static: true },
-          { label: `tester_id: ${testerId}`, static: true }
+          { label: "Send Feedback", action: { type: "function", name: "sendFeedback" } }
         ]
       },
+
       {
+        header: "Backup",
         items: [
-          { label: "Copy Tester ID", action: { type: "function", name: "copyTesterId" } },
-          { label: "Send Feedback", action: { type: "function", name: "sendFeedback" } },
-          { label: "Export Data", action: { type: "function", name: "exportData" } },
-          { label: "Import Data", action: { type: "function", name: "importData" } },
-          { label: `Debug: ${debugOn ? "ON" : "OFF"}`, action: { type: "function", name: "toggleDebug" } },
-          { label: "Reset All Data", class: "destructive", action: { type: "function", name: "resetAll" } }
+          { label: "Export My Settings", action: { type: "function", name: "exportData" } },
+          { label: "Import My Settings", action: { type: "function", name: "importData" } }
+        ]
+      },
+
+      {
+        header: "App Info",
+        items: [
+          { label: `Version: ${versions.app_version}`, static: true },
+          { label: "Copy Tester ID", action: { type: "function", name: "copyTesterId" } }
         ]
       }
-    ]);
 
+    ]);
   }
 
+  /* -----------------------
+     DATA
+  ----------------------- */
+
   async function exportData() {
+
     const payload = window.DashMsg?.exportState?.();
+
     if (!payload) return toast("Export failed", false);
+
     const ok = await window.DashMsg?.copyToClipboard?.(payload);
-    toast(ok ? "Export copied" : "Export copy failed", !!ok, ok ? "Copied" : "Error");
+
+    toast(ok ? "Export copied" : "Export failed", ok);
   }
 
   async function importData() {
+
     const raw = prompt("Paste export JSON");
+
     if (!raw) return;
+
     const result = window.DashMsg?.importState?.(raw);
+
     if (result?.ok) {
       populateShoppingMenu();
-      toast("Imported", true, "Saved");
+      toast("Settings imported", true);
       navigateTo("settings", { push: false });
     } else {
       toast(result?.error || "Import failed", false);
     }
   }
 
-  function toggleDebug() {
-    const next = !window.DashMsg?.isDebug?.();
-    window.DashMsg?.setDebug?.(next);
-    toast(`Debug ${next ? "ON" : "OFF"}`, true, "Saved");
-    openBeta();
-  }
+  /* -----------------------
+     FEEDBACK
+  ----------------------- */
 
   function openFeedback() {
-    const stack = window.DashMsg?.navStack?.() || [];
-    if (stack[stack.length - 1] !== "feedback") window.DashMsg?.pushNav?.("feedback");
+
     currentScreen = "feedback";
+
     app.innerHTML = `
-      <h1>Feedback</h1>
-      <div class="list feedback-panel">
-        <div class="feedback-wrap">
-          <textarea id="feedback-input" class="feedback-input" placeholder="Tell us what happened, what you'd like improved, and any ideas."></textarea>
-          <button class="row" data-action='{"type":"function","name":"submitFeedback"}'>Submit</button>
-        </div>
-      </div>
-      <div class="list bottom-nav">
-        <button class="row back" data-action='{"type":"navBack"}'>Back</button>
+      ${headerHtml("Feedback")}
+      <div class="list">
+        <textarea id="feedback-input" class="feedback-input"
+        placeholder="Tell us what happened or what you'd like improved"></textarea>
+
+        <button class="row"
+        data-action='{"type":"function","name":"submitFeedback"}'>
+        Send Feedback
+        </button>
       </div>
     `;
   }
 
   async function submitFeedback() {
+
     const input = document.getElementById("feedback-input");
+
     const message = input?.value?.trim();
+
     if (!message) return toast("Please enter feedback", false);
 
     const res = await window.DashMsg?.sendFeedback?.(message);
+
     if (res?.ok) {
-      toast("Feedback sent", true, "Saved");
-      navigateTo("beta", { push: false });
+      toast("Feedback sent", true, "Thank you");
+      navigateTo("main");
     } else {
       toast("Feedback failed", false);
     }
   }
 
   async function copyTesterId() {
+
     const tester = window.DashMsg?.getTesterId?.() || "";
+
     const ok = await window.DashMsg?.copyToClipboard?.(tester);
-    toast(ok ? "Tester ID copied" : "Copy failed", !!ok);
+
+    toast(ok ? "Tester ID copied" : "Copy failed", ok);
   }
 
   return {
+
     renderScreen,
     navigateTo,
     navBack,
     goHome,
+
     dispatchAction,
+
     useTemplate,
     setETA,
+
     toast,
+
     openBeta,
     openFeedback,
+
     exportData,
     importData,
-    toggleDebug,
+
     populateShoppingMenu,
+
     setEmojiOn: () => setPrefAndRefresh("emoji_on", true),
     setEmojiOff: () => setPrefAndRefresh("emoji_on", false),
+
     setNamePromptOn: () => setPrefAndRefresh("name_prompt", true),
     setNamePromptOff: () => setPrefAndRefresh("name_prompt", false),
+
     copyTesterId
+
   };
+
 })();
 
 window.DashMsgUI = DashMsgUI;
