@@ -5,6 +5,14 @@
 /* =========================
    Design tokens
 ========================= */
+
+#dashmsg-fab{
+  position:fixed; right:16px; bottom:calc(16px + env(safe-area-inset-bottom));
+  width:52px;height:52px;border-radius:26px;border:0;
+  background:rgba(0,0,0,.88); color:#fff; font-size:22px;
+  box-shadow:0 10px 30px rgba(0,0,0,.25); z-index:9999;
+}
+#dashmsg-fab:active{ transform:scale(.96); }
 :root{
   --app-max: 420px;
 
