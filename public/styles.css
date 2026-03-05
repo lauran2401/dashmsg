@@ -255,3 +255,45 @@ input[type="text"]:focus {
     border-color: var(--accent-blue);
     box-shadow: 0 0 0 3px rgba(10, 132, 255, 0.15);
 }
+
+.toast {
+  top: calc(env(safe-area-inset-top) + 10px);
+  bottom: auto;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .15s ease;
+}
+.toast.show { opacity: 1; }
+.toast.ok { background: rgba(36, 138, 61, 0.95); }
+.toast.error { background: rgba(176, 42, 42, 0.95); }
+.toast-title { font-size: 11px; font-weight: 700; text-transform: uppercase; }
+.toast-msg { margin-top: 4px; font-size: 12px; }
+
+.static-row {
+  color: var(--text-secondary);
+  cursor: default;
+}
+
+.feedback-panel {
+  padding: 14px;
+}
+.feedback-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.feedback-input {
+  width: 100%;
+  min-height: 130px;
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  font: inherit;
+  padding: 10px;
+  resize: vertical;
+  background: transparent;
+  color: var(--text-primary);
+}
+.beta-meta {
+  color: var(--text-secondary);
+  font-size: 12px;
+}
