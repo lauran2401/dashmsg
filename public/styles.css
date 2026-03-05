@@ -2,6 +2,35 @@
  * Combining 2006 High-Gloss with 2026 Precision
  */
 /* ===== DashMsg polish layer ===== */
+
+.nav-bar {
+  display: grid;
+  grid-template-columns: 80px 1fr 80px;
+  align-items: center;
+  padding: 12px 16px;
+}
+
+.nav-title {
+  text-align: center;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.nav-btn.home {
+  text-align: left;
+  background: none;
+  border: none;
+  color: #0a84ff;
+  font-size: 17px;
+}
+
+.bottom-back {
+  margin-top: 18px;
+}
+
+.row.back {
+  font-weight: 500;
+}
 .topbar{
   position: sticky;
   top: 0;
