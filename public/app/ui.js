@@ -22,7 +22,19 @@ function clearCustomerName() {
 function lsGet(key, fallback) {
   try { return JSON.parse(localStorage.getItem(key) || ""); } catch { return fallback; }
 }
+import { mountFeedbackWidget } from "./feedback-widget.js";
 
+mountFeedbackWidget({
+  onSubmit: async (payload) => {
+    // replace with your real endpoint later
+    console.log("Submitting feedback:", payload);
+
+    // fake delay
+    await new Promise(r => setTimeout(r, 400));
+
+    return { ok: true };
+  }
+});
 function lsSet(key, val) {
   localStorage.setItem(key, JSON.stringify(val));
 }
