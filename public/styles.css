@@ -211,7 +211,9 @@
   font-size: 14px;
   color: #111827;
 }
-
+.fb-results:empty {
+  display: none;
+}
 .fb-result:hover,
 .fb-chip:hover,
 .fb-more:hover,
@@ -294,7 +296,7 @@
 }
 
 .fb-submit:disabled {
-  opacity: .65;
+  opacity: .5;
   cursor: not-allowed;
 }
 /* =========================
