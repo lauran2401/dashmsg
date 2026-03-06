@@ -1,62 +1,73 @@
-
 const LS_RECENT = "dashmsg_beta_recent";
 const LS_PINS = "dashmsg_beta_pins";
 const LS_QUEUE = "dashmsg_beta_queue";
-const LS_DRAFT = "dashmsg_beta_draft";
-const LS_LAST_SUBMISSIONS = "dashmsg_beta_last_submissions";
 
 function lsGet(key, fallback) {
-  try { return JSON.parse(localStorage.getItem(key) || ""); } catch { return fallback; }
+  try {
+    return JSON.parse(localStorage.getItem(key) || "");
+  } catch {
+    return fallback;
+  }
 }
-function lsSet(key, val) { localStorage.setItem(key, JSON.stringify(val)); }
-function norm(s) { return String(s || "").toLowerCase().trim(); }
+
+function lsSet(key, val) {
+  localStorage.setItem(key, JSON.stringify(val));
+}
+
+const FEEDBACK_CATALOG = [
+  { id: "tpl_rename", cat: "Templates", title: "Rename template", desc: "Improve labels people see in the editor", tags: ["name", "label", "rename", "title"] },
+  { id: "tpl_reorder", cat: "Templates", title: "Change template order", desc: "Better default ordering and grouping", tags: ["order", "sort", "group"] },
+  { id: "tpl_wording", cat: "Templates", title: "Improve template wording", desc: "Make message clearer, shorter, more polite", tags: ["copy", "tone", "wording", "text"] },
+  { id: "tpl_add", cat: "Templates", title: "Add new template", desc: "Missing scenario, add a new preset", tags: ["new", "missing", "scenario"] },
+  { id: "tpl_vars", cat: "Templates", title: "Add placeholder/variable", desc: "Name/ETA/store/hot bag placeholders", tags: ["variable", "placeholder", "eta", "name"] },
+  { id: "ui_spacing", cat: "UI", title: "Fix spacing/layout", desc: "Padding, alignment, dense/airy", tags: ["spacing", "layout", "padding"] },
+  { id: "ui_nav", cat: "UI", title: "Navigation confusion", desc: "Hard to find a screen or go back", tags: ["navigation", "back", "home"] },
+  { id: "ui_scroll", cat: "UI", title: "Scrolling issue", desc: "Scroll area feels wrong or stuck", tags: ["scroll", "overflow"] },
+  { id: "auto_context", cat: "Automation", title: "Auto-suggest best template", desc: "Choose message based on context", tags: ["auto", "suggest", "smart"] },
+  { id: "auto_eta", cat: "Automation", title: "Better ETA handling", desc: "ETA prompts, formatting, toggles", tags: ["eta", "time"] },
+  { id: "bug_copy", cat: "Bug", title: "Copy/paste failure", desc: "Clipboard not working or wrong text", tags: ["copy", "clipboard", "paste"] },
+  { id: "bug_save", cat: "Bug", title: "Save/reset failure", desc: "Edits not persisting or reset wrong", tags: ["save", "reset", "storage"] },
+  { id: "bug_crash", cat: "Bug", title: "Crash/error", desc: "Screen breaks or JS error", tags: ["crash", "error"] }
+];
+
+function norm(s) {
+  return String(s || "").toLowerCase().trim();
+}
+
+function scoreItem(q, item) {
+  if (!q) return 0;
+  const t = norm(item.title);
+  const d = norm(item.desc);
+  const tags = (item.tags || []).map(norm).join(" ");
+  const qq = norm(q);
+
+  if (t === qq) return 100;
+  if (t.startsWith(qq)) return 80;
+  if (t.includes(qq)) return 60;
+  if (tags.includes(qq)) return 55;
+  if (d.includes(qq)) return 35;
+
+  const toks = qq.split(/\s+/).filter(Boolean);
+  let hits = 0;
+  for (const tok of toks) {
+    if (t.includes(tok) || tags.includes(tok) || d.includes(tok)) hits++;
+  }
+  return hits ? 20 + hits * 6 : 0;
+}
+
+function uniqueById(arr) {
+  const seen = new Set();
+  return arr.filter((x) => (seen.has(x.id) ? false : (seen.add(x.id), true)));
+}
 
 function getFeedbackContext() {
   return {
-    route: location.pathname,
     url: location.href,
     screen: window.DashMsgUI?.currentScreen?.() || null,
-    last_action: window.DashMsgUI?.lastAction?.() || null,
     app_version: window.DashMsg?.defaults?.()?.app_version || null,
-    platform: navigator.platform || null,
-    device: navigator.userAgent || null,
-    browser: navigator.userAgent || null,
-    timestamp: Date.now()
+    tester_id: localStorage.getItem("dashmsg_tester_id") || null,
+    debug: !!localStorage.getItem("dashmsg_debug")
   };
-}
-
-function boost(item, recents, pins) {
-  const pop = Math.min(Number(item.globalUseCount || 0), 100) / 20;
-  const pri = Number(item.priority || 0) * 2;
-  const recent = recents.includes(item.id) ? 8 : 0;
-  const pin = pins.includes(item.id) ? 10 : 0;
-  return pop + pri + recent + pin;
-}
-
-function buildMiniSearch(docs) {
-  const MiniSearchCtor = window.MiniSearch;
-  if (!MiniSearchCtor) return null;
-  const ms = new MiniSearchCtor({
-    fields: ["title", "description", "tags", "aliases", "categories"],
-    storeFields: ["id", "title", "description", "categories", "prompt", "priority", "globalUseCount"],
-    searchOptions: { fuzzy: 0.2, prefix: true }
-  });
-  ms.addAll(docs);
-  return ms;
-}
-
-function highlightText(text, query) {
-  const q = norm(query);
-  if (!q) return String(text || "");
-  const base = String(text || "");
-  const parts = q.split(/\s+/).filter(Boolean).slice(0, 5);
-  let out = base;
-  for (const p of parts) {
-    const escaped = p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const re = new RegExp(`(${escaped})`, "ig");
-    out = out.replace(re, '<mark class="beta-hit">$1</mark>');
-  }
-  return out;
 }
 
 function initFeedbackCommandPalette() {
@@ -64,214 +75,228 @@ function initFeedbackCommandPalette() {
   const panel = document.getElementById("beta-panel");
   const close = document.getElementById("beta-close");
   const search = document.getElementById("beta-search");
-  const selected = document.getElementById("beta-selected");
-  const notes = document.getElementById("beta-notes");
-  const chars = document.getElementById("beta-charcount");
-  const debugToggle = document.getElementById("beta-debug");
+  const tabs = document.getElementById("beta-tabs");
   const results = document.getElementById("beta-results");
-  const moreBtn = document.getElementById("beta-more");
-  const custom = document.getElementById("beta-custom");
-  const cancel = document.getElementById("beta-cancel");
+  const notes = document.getElementById("beta-notes");
   const send = document.getElementById("beta-send");
-  if (!fab || !panel || !search || !selected || !notes || !results || !send) return;
 
-  let docs = [];
-  let mini = null;
-  let selectedSuggestion = null;
+  if (!fab || !panel || !search || !tabs || !results || !notes || !send) return;
+
+  let activeTab = "recent";
+  let selectedId = null;
   let selectedIndex = 0;
-  let displayCount = 5;
-  let currentList = [];
-  let searching = false;
-  let debounce = null;
-  let draftTimer = null;
 
-  function track(name, extras = {}) {
-    try { window.DashMsg?.logEvent?.(`feedback_${name}`, "Feedback", extras); } catch {}
-  }
+  const pins = lsGet(LS_PINS, []);
+  const recents = lsGet(LS_RECENT, []);
 
-  async function loadSuggestions() {
-    try {
-      const r = await fetch("/suggestions.json", { cache: "force-cache" });
-      if (!r.ok) throw new Error("suggestions_fetch_failed");
-      const data = await r.json();
-      docs = Array.isArray(data?.suggestions) ? data.suggestions : [];
-      mini = buildMiniSearch(docs);
-    } catch {
-      docs = [];
-      mini = null;
-    }
-  }
-
-  function openPanel() {
-    panel.hidden = false;
-    fab.setAttribute("aria-expanded", "true");
-    const draft = lsGet(LS_DRAFT, { search: "", notes: "", selectedId: null, debug: false });
-    search.value = draft.search || "";
-    notes.value = draft.notes || "";
-    debugToggle.checked = !!draft.debug;
-    selectedSuggestion = docs.find((d) => d.id === draft.selectedId) || null;
-    selectedIndex = 0;
-    displayCount = 5;
-    renderSelected();
-    refreshList();
-    notes.style.height = "auto";
-    notes.style.height = `${Math.min(notes.scrollHeight, 180)}px`;
-    updateSendState();
-    track("panel_open");
+  function open() {
+    panel.style.display = "block";
+    search.value = "";
+    notes.value = "";
+    activeTab = "recent";
+    setActiveTabUI();
+    render();
     setTimeout(() => search.focus(), 0);
   }
 
-  function closePanel() {
-    panel.hidden = true;
-    fab.setAttribute("aria-expanded", "false");
-    track("panel_close");
+  function hide() {
+    panel.style.display = "none";
+    selectedId = null;
+    selectedIndex = 0;
   }
 
-  function saveDraft() {
-    lsSet(LS_DRAFT, {
-      search: search.value,
-      notes: notes.value,
-      selectedId: selectedSuggestion?.id || null,
-      debug: !!debugToggle.checked,
-      ts: Date.now()
+  fab.onclick = open;
+  close.onclick = hide;
+
+  document.addEventListener("pointerdown", (e) => {
+    if (panel.style.display !== "block") return;
+    if (e.target === panel || panel.contains(e.target) || e.target === fab) return;
+    hide();
+  });
+
+  function setActiveTabUI() {
+    tabs.querySelectorAll(".beta-tab").forEach((b) => {
+      b.classList.toggle("is-active", b.dataset.tab === activeTab);
     });
   }
 
-  function renderSelected() {
-    if (!selectedSuggestion) {
-      selected.className = "beta-selected empty";
-      selected.innerHTML = "No suggestion selected yet.";
-      return;
-    }
-    const cats = (selectedSuggestion.categories || []).map((c) => `<span class="beta-chip">${c}</span>`).join("");
-    selected.className = "beta-selected";
-    selected.innerHTML = `
-      <div class="beta-item-title">${selectedSuggestion.title}</div>
-      <div class="beta-item-desc">${selectedSuggestion.description || ""}</div>
-      <div>${cats}</div>
-      ${selectedSuggestion.prompt ? `<div class="beta-item-desc">${selectedSuggestion.prompt}</div>` : ""}
-    `;
-  }
+  tabs.onclick = (e) => {
+    const btn = e.target.closest("[data-tab]");
+    if (!btn) return;
+    activeTab = btn.dataset.tab;
+    setActiveTabUI();
+    render();
+  };
 
-  function defaultGroups(recents, sortedTop) {
-    const groups = [];
-    const recent = recents.map((id) => docs.find((d) => d.id === id)).filter(Boolean).slice(0, 5);
-    if (recent.length) groups.push({ label: "Recent", items: recent });
-    groups.push({ label: "Top suggestions", items: sortedTop.slice(0, 5) });
+  search.oninput = () => {
+    activeTab = "all";
+    setActiveTabUI();
+    render();
+  };
 
-    const order = ["UI","Automation","Templates","Navigation","Performance","Notifications","Messages","Stores","Orders","General ideas"];
-    for (const cat of order) {
-      const items = docs.filter((d) => (d.categories || []).includes(cat)).slice(0, 3);
-      if (items.length) groups.push({ label: cat, items });
-    }
-    return groups;
-  }
+  function getTabItems() {
+    const q = norm(search.value);
 
-  function runSearch(query, recents, pins) {
-    if (!query) {
-      const sortedTop = [...docs].sort((a,b)=> (boost(b, recents, pins) - boost(a, recents, pins)));
-      const grouped = defaultGroups(recents, sortedTop);
-      const flat = grouped.flatMap((g)=>g.items);
-      return { grouped, flat, noMatch: false };
+    if (activeTab === "categories") return [];
+
+    if (activeTab === "all") {
+      const scored = FEEDBACK_CATALOG
+        .map((it) => ({ it, s: scoreItem(q, it) }))
+        .filter((x) => (q ? x.s > 0 : true))
+        .sort((a, b) => b.s - a.s);
+
+      const pinnedItems = FEEDBACK_CATALOG.filter((it) => pins.includes(it.id));
+      const recentItems = FEEDBACK_CATALOG.filter((it) => recents.includes(it.id));
+
+      return uniqueById([
+        ...pinnedItems,
+        ...recentItems,
+        ...scored.map((x) => x.it)
+      ]);
     }
 
-    if (!mini) return { grouped: [], flat: [], noMatch: true };
-    const hits = mini.search(query, { fuzzy: 0.2, prefix: true, combineWith: "AND" });
-    const ranked = hits
-      .map((h) => {
-        const d = docs.find((x) => x.id === h.id);
-        if (!d) return null;
-        const score = Number(h.score || 0) + boost(d, recents, pins);
-        return { d, score };
-      })
-      .filter(Boolean)
-      .sort((a, b) => b.score - a.score)
-      .map((x) => x.d);
-    return { grouped: [{ label: "Search", items: ranked }], flat: ranked, noMatch: ranked.length === 0 };
+    const recentItems = FEEDBACK_CATALOG.filter((it) => recents.includes(it.id));
+    const pinnedItems = FEEDBACK_CATALOG.filter((it) => pins.includes(it.id));
+    return uniqueById([...pinnedItems, ...recentItems]);
   }
 
-  function rowHtml(item, query, idx, recents, pins) {
-    const meta = pins.includes(item.id) ? "Pinned" : recents.includes(item.id) ? "Recent" : "";
-    const cls = idx === selectedIndex ? "beta-item is-selected" : "beta-item";
+  function rowHtml(it) {
+    const meta = (pins.includes(it.id) ? "Pinned" : (recents.includes(it.id) ? "Recent" : ""));
     return `
-      <div class="${cls}" data-id="${item.id}" role="option" aria-selected="${idx === selectedIndex}">
-        <div>
-          <div class="beta-item-title">${highlightText(item.title, query)}</div>
-          <div class="beta-item-desc">${highlightText(item.description || "", query)}</div>
+      <div class="beta-item" data-id="${it.id}">
+        <div class="beta-item-main">
+          <div class="beta-item-title">${it.title}</div>
+          <div class="beta-item-desc">${it.desc}</div>
         </div>
         <div class="beta-item-meta">${meta}</div>
       </div>
     `;
   }
 
-  function refreshList() {
-    const recents = lsGet(LS_RECENT, []);
-    const pins = lsGet(LS_PINS, []);
-    const q = search.value.trim();
-    const out = runSearch(q, recents, pins);
-    currentList = out.flat;
-
-    let rowIndex = 0;
+  function renderItems(list, withGroup) {
     let html = "";
-    for (const group of out.grouped) {
-      if (rowIndex >= displayCount) break;
-      const rows = [];
-      for (const item of group.items) {
-        if (rowIndex >= displayCount) break;
-        rows.push(rowHtml(item, q, rowIndex, recents, pins));
-        rowIndex++;
-      }
-      if (rows.length) {
-        html += `<div class="beta-group">${group.label}</div>`;
-        html += rows.join("");
-      }
+    if (withGroup) {
+      const byCat = {};
+      list.forEach((it) => {
+        byCat[it.cat] = byCat[it.cat] || [];
+        byCat[it.cat].push(it);
+      });
+      Object.keys(byCat).forEach((cat) => {
+        html += `<div class="beta-group">${cat}</div>`;
+        html += byCat[cat].map((it) => rowHtml(it)).join("");
+      });
+      return html;
+    }
+    return list.map((it) => rowHtml(it)).join("");
+  }
+
+  function renderCategories() {
+    const cats = [...new Set(FEEDBACK_CATALOG.map((x) => x.cat))].sort();
+    const html = cats.map((cat) => {
+      const count = FEEDBACK_CATALOG.filter((x) => x.cat === cat).length;
+      return `
+        <div class="beta-item" data-cat="${cat}">
+          <div class="beta-item-main">
+            <div class="beta-item-title">${cat}</div>
+            <div class="beta-item-desc">${count} options</div>
+          </div>
+          <div class="beta-item-meta"></div>
+        </div>
+      `;
+    }).join("");
+
+    results.innerHTML = html || `<div class="beta-item"><div class="beta-item-main"><div class="beta-item-title">No categories</div></div></div>`;
+    selectedIndex = 0;
+    applySelection();
+  }
+
+  function render() {
+    if (activeTab === "categories") {
+      renderCategories();
+      return;
     }
 
-    if (!html) html = `<div class="beta-item"><div><div class="beta-item-title">No matches</div><div class="beta-item-desc">Try another term.</div></div></div>`;
-    results.innerHTML = html;
+    const list = getTabItems();
+    if (activeTab === "recent") {
+      results.innerHTML = list.length
+        ? renderItems(list, true)
+        : `<div class="beta-item"><div class="beta-item-main"><div class="beta-item-title">No recent feedback</div><div class="beta-item-desc">Use “All” to pick a suggestion.</div></div></div>`;
+    } else {
+      results.innerHTML = list.length
+        ? renderItems(list, true)
+        : `<div class="beta-item"><div class="beta-item-main"><div class="beta-item-title">No matches</div><div class="beta-item-desc">Try different keywords.</div></div></div>`;
+    }
 
-    moreBtn.hidden = out.flat.length <= displayCount;
-    custom.hidden = !(out.noMatch && q.length > 1);
-    custom.innerHTML = out.noMatch && q.length > 1 ? `Send as new suggestion: <strong>${q}</strong>` : "";
+    selectedIndex = 0;
+    applySelection();
+  }
 
-    if (selectedIndex >= out.flat.length) selectedIndex = 0;
-    selectByIndex(selectedIndex);
-    updateSendState();
+  function applySelection() {
+    const items = [...results.querySelectorAll(".beta-item")];
+    items.forEach((el, i) => el.classList.toggle("is-selected", i === selectedIndex));
   }
 
   function selectByIndex(i) {
-    const els = [...results.querySelectorAll(".beta-item[data-id]")];
-    if (!els.length) return;
-    selectedIndex = Math.max(0, Math.min(i, els.length - 1));
-    els.forEach((el, idx) => el.classList.toggle("is-selected", idx === selectedIndex));
-    els[selectedIndex]?.scrollIntoView({ block: "nearest" });
+    const items = [...results.querySelectorAll(".beta-item")];
+    if (!items.length) return;
+    selectedIndex = Math.max(0, Math.min(i, items.length - 1));
+    applySelection();
+    items[selectedIndex].scrollIntoView({ block: "nearest" });
   }
 
-  function selectSuggestion(id) {
-    const found = docs.find((d) => d.id === id);
-    if (!found) return;
-    selectedSuggestion = found;
-    const recents = lsGet(LS_RECENT, []);
-    lsSet(LS_RECENT, [id, ...recents.filter((x) => x !== id)].slice(0, 5));
-    renderSelected();
-    updateSendState();
-    saveDraft();
-    track("suggestion_selected", { suggestion_id: id });
-  }
+  results.onclick = (e) => {
+    const el = e.target.closest(".beta-item");
+    if (!el) return;
 
-  function updateSendState() {
-    const n = notes.value.trim();
-    const customText = search.value.trim();
-    const canSend = !!selectedSuggestion || (!!customText && currentList.length === 0);
-    send.disabled = !canSend || searching || (!n && !selectedSuggestion && !customText);
-    chars.textContent = `${notes.value.length}/500`;
-  }
+    const id = el.dataset.id;
+    const cat = el.dataset.cat;
 
-  function detectDuplicate(payload) {
-    const prev = lsGet(LS_LAST_SUBMISSIONS, []);
-    const key = norm(`${payload.suggestion_title || ""} ${payload.custom_text || ""}`);
-    const similar = prev.find((x) => Math.abs(Date.now() - x.ts) < 15 * 60 * 1000 && key.includes(x.key.slice(0, 20)));
-    return !!similar;
+    if (cat) {
+      activeTab = "all";
+      setActiveTabUI();
+      search.value = cat;
+      render();
+      return;
+    }
+
+    if (id) {
+      selectedId = id;
+      const it = FEEDBACK_CATALOG.find((x) => x.id === id);
+      if (it) search.value = it.title;
+    }
+  };
+
+  panel.addEventListener("keydown", (e) => {
+    if (panel.style.display !== "block") return;
+
+    if (e.key === "Escape") { e.preventDefault(); hide(); return; }
+    if (e.key === "ArrowDown") { e.preventDefault(); selectByIndex(selectedIndex + 1); return; }
+    if (e.key === "ArrowUp") { e.preventDefault(); selectByIndex(selectedIndex - 1); return; }
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const items = [...results.querySelectorAll(".beta-item")];
+      const el = items[selectedIndex];
+      if (!el) return;
+
+      const id = el.dataset.id;
+      const cat = el.dataset.cat;
+      if (cat) {
+        activeTab = "all";
+        setActiveTabUI();
+        search.value = cat;
+        render();
+      } else if (id) {
+        const it = FEEDBACK_CATALOG.find((x) => x.id === id);
+        selectedId = id;
+        if (it) search.value = it.title;
+      }
+    }
+  });
+
+  function pushRecent(id) {
+    const r = lsGet(LS_RECENT, []);
+    const next = [id, ...r.filter((x) => x !== id)].slice(0, 12);
+    lsSet(LS_RECENT, next);
   }
 
   async function enqueueOrSend(payload) {
@@ -286,134 +311,31 @@ function initFeedbackCommandPalette() {
     }
   }
 
-  async function submitFeedback() {
-    const query = search.value.trim();
-    const noMatchCustom = !!query && currentList.length === 0;
+  send.onclick = async () => {
+    const qTitle = norm(search.value);
+    let cmd = selectedId ? FEEDBACK_CATALOG.find((x) => x.id === selectedId) : null;
+    if (!cmd && qTitle) {
+      cmd = FEEDBACK_CATALOG.find((x) => norm(x.title) === qTitle) || null;
+    }
+
     const payload = {
-      suggestion_id: selectedSuggestion?.id || null,
-      suggestion_title: selectedSuggestion?.title || null,
-      custom_text: noMatchCustom ? query : "",
-      notes: notes.value.trim(),
-      route: location.pathname,
-      screen: window.DashMsgUI?.currentScreen?.() || null,
-      timestamp: Date.now(),
-      app_version: window.DashMsg?.defaults?.()?.app_version || null,
-      platform: navigator.platform || null,
-      device: navigator.userAgent || null,
-      browser: navigator.userAgent || null,
-      debug_data: debugToggle.checked ? getFeedbackContext() : null,
-      context: getFeedbackContext()
+      type: "smart_feedback",
+      command_id: cmd?.id || null,
+      command_title: cmd?.title || search.value || null,
+      category: cmd?.cat || null,
+      notes: notes.value || "",
+      context: getFeedbackContext(),
+      ts: Date.now()
     };
-
-    if (detectDuplicate(payload) && !confirm("Similar feedback was sent recently. Send again?")) return;
-
-    searching = true;
-    send.textContent = "Sending…";
-    send.disabled = true;
-    search.disabled = true;
-    notes.disabled = true;
 
     const ok = await enqueueOrSend(payload);
 
-    const prev = lsGet(LS_LAST_SUBMISSIONS, []);
-    prev.unshift({ key: norm(`${payload.suggestion_title || ""} ${payload.custom_text || ""}`), ts: Date.now() });
-    lsSet(LS_LAST_SUBMISSIONS, prev.slice(0, 20));
+    if (cmd?.id) pushRecent(cmd.id);
+    hide();
 
-    notes.value = "";
-    search.value = "";
-    selectedSuggestion = null;
-    lsSet(LS_DRAFT, { search: "", notes: "", selectedId: null, debug: debugToggle.checked, ts: Date.now() });
-    renderSelected();
-    refreshList();
-
-    searching = false;
-    send.textContent = "Send";
-    search.disabled = false;
-    notes.disabled = false;
-    updateSendState();
-
-    window.DashMsgUI?.toast?.(ok ? "Feedback sent" : "Queued for retry", true, "Saved");
-    track("feedback_sent", { queued: !ok, suggestion_id: payload.suggestion_id, custom: !!payload.custom_text });
-  }
-
-  fab.onclick = () => (panel.hidden ? openPanel() : closePanel());
-  close.onclick = closePanel;
-  cancel.onclick = closePanel;
-
-  document.addEventListener("pointerdown", (e) => {
-    if (panel.hidden) return;
-    if (panel.contains(e.target) || e.target === fab) return;
-    closePanel();
-  });
-
-  search.addEventListener("input", () => {
-    clearTimeout(debounce);
-    debounce = setTimeout(() => {
-      displayCount = 5;
-      refreshList();
-      track("search_query", { q: search.value.trim().slice(0, 80) });
-      saveDraft();
-    }, 300);
-  });
-
-  notes.addEventListener("input", () => {
-    if (notes.value.length > 500) notes.value = notes.value.slice(0, 500);
-    notes.style.height = "auto";
-    notes.style.height = `${Math.min(notes.scrollHeight, 180)}px`;
-    updateSendState();
-  });
-
-  debugToggle.addEventListener("change", saveDraft);
-
-  results.addEventListener("click", (e) => {
-    const row = e.target.closest(".beta-item[data-id]");
-    if (!row) return;
-    selectSuggestion(row.dataset.id);
-  });
-  results.addEventListener("dblclick", (e) => {
-    const row = e.target.closest(".beta-item[data-id]");
-    if (!row) return;
-    const pins = lsGet(LS_PINS, []);
-    const id = row.dataset.id;
-    const next = pins.includes(id) ? pins.filter((x) => x !== id) : [id, ...pins].slice(0, 12);
-    lsSet(LS_PINS, next);
-    refreshList();
-  });
-
-
-  moreBtn.addEventListener("click", () => {
-    displayCount += 10;
-    refreshList();
-  });
-
-  custom.addEventListener("click", () => {
-    selectedSuggestion = null;
-    renderSelected();
-    updateSendState();
-  });
-
-  send.addEventListener("click", submitFeedback);
-
-  panel.addEventListener("keydown", (e) => {
-    if (panel.hidden) return;
-    if (e.key === "Escape") { e.preventDefault(); closePanel(); return; }
-    if (e.key === "ArrowDown") { e.preventDefault(); selectByIndex(selectedIndex + 1); return; }
-    if (e.key === "ArrowUp") { e.preventDefault(); selectByIndex(selectedIndex - 1); return; }
-    if (e.key === "Enter") {
-      const item = currentList[selectedIndex];
-      if (item) { e.preventDefault(); selectSuggestion(item.id); }
-    }
-  });
-
-  draftTimer = setInterval(saveDraft, 1000);
-  window.addEventListener("beforeunload", () => clearInterval(draftTimer));
-
-  loadSuggestions().then(() => {
-    renderSelected();
-    refreshList();
-  });
+    window.DashMsgUI?.toast?.(ok ? "Sent" : "Queued", true, "Saved");
+  };
 }
-
 
 // public/app/ui.js — fixed (Home upper-left, Back only at bottom, no broken braces)
 
@@ -764,7 +686,6 @@ const DashMsgUI = (() => {
     importData,
     populateShoppingMenu,
     currentScreen: () => currentScreen,
-    lastAction: () => lastActionType,
     setEmojiOn: () => setPrefAndRefresh("emoji_on", true),
     setEmojiOff: () => setPrefAndRefresh("emoji_on", false),
     setNamePromptOn: () => setPrefAndRefresh("name_prompt", true),

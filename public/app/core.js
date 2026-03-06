@@ -212,23 +212,10 @@ const DashMsg = (() => {
   }
 
   async function sendFeedback(payload) {
-    const body = typeof payload === "string"
-      ? { tester_id: getTesterId(), message: payload }
-      : {
-        tester_id: getTesterId(),
-        message: JSON.stringify(payload),
-        suggestion_id: payload?.suggestion_id || null,
-        suggestion_title: payload?.suggestion_title || null,
-        custom_text: payload?.custom_text || "",
-        route: payload?.route || location.pathname,
-        screen: payload?.screen || null,
-        timestamp: payload?.timestamp || Date.now(),
-        app_version: payload?.app_version || getVersions().app_version,
-        platform: payload?.platform || navigator.platform || null,
-        device: payload?.device || navigator.userAgent || null,
-        browser: payload?.browser || navigator.userAgent || null,
-        debug_data: payload?.debug_data || null
-      };
+    const body = {
+      tester_id: getTesterId(),
+      message: typeof payload === "string" ? payload : JSON.stringify(payload)
+    };
 
     const r = await fetch(API_FB_URL, {
       method: "POST",
