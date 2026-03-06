@@ -501,14 +501,6 @@ background:transparent;
 #beta-search{ width:100%; height:42px; padding:10px 12px; border-radius:12px; border:1px solid #d8dce3; outline:none; font-size:15px; background:#fbfcff; }
 #beta-search:focus{ border-color:#007aff; box-shadow:0 0 0 3px rgba(0,122,255,.17); }
 
-.beta-selected-chip-row{
-  display:flex; align-items:center; gap:6px; border:1px solid #d7e7ff; background:#f6fbff;
-  border-radius:999px; padding:6px 10px;
-}
-.beta-selected-prefix{ font-size:11px; color:#5f7395; font-weight:700; }
-.beta-selected-chip{ flex:1; min-width:0; font-size:12px; font-weight:700; color:#18426e; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.beta-selected-clear{ width:24px; height:24px; border:none; border-radius:99px; background:#e4efff; color:#24558f; cursor:pointer; }
-.beta-selected-clear:hover{ background:#d7e8ff; }
 
 #beta-inline-results{
   border:1px solid #e8edf5; border-radius:12px; padding:8px; background:#fff;

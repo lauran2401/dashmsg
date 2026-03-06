@@ -478,12 +478,9 @@ const DashMsgUI = (() => {
     const browseAz = document.getElementById("beta-browse-az");
     const azList = document.getElementById("beta-az-list");
     const dynamicFields = document.getElementById("beta-dynamic-fields");
-    const selectedRow = document.getElementById("beta-selected");
-    const selectedChip = document.getElementById("beta-selected-chip");
-    const selectedClear = document.getElementById("beta-selected-clear");
     const send = document.getElementById("beta-send");
 
-    if (!fab || !miniBar || !panel || !minimize || !close || !search || !inlineResults || !browseCats || !catsList || !browseAz || !azList || !dynamicFields || !selectedRow || !selectedChip || !selectedClear || !send) return;
+    if (!fab || !miniBar || !panel || !minimize || !close || !search || !inlineResults || !browseCats || !catsList || !browseAz || !azList || !dynamicFields || !send) return;
 
     const initialDraft = lsGet(LS_DRAFT, null);
     let selectedId = initialDraft?.selectedId || null;
@@ -567,16 +564,7 @@ const DashMsgUI = (() => {
       syncPanelHeight();
     }
 
-    function renderSelectedChip() {
-      const selected = getSelectedSuggestion();
-      if (!selected) {
-        selectedRow.hidden = true;
-        selectedChip.textContent = "";
-        renderDynamicFields();
-        return;
-      }
-      selectedRow.hidden = false;
-      selectedChip.textContent = selected.title;
+    function syncSelectionUI() {
       renderDynamicFields();
     }
 
@@ -668,22 +656,13 @@ const DashMsgUI = (() => {
       selectedId = item.id;
       selectedTitle = item.title;
       search.value = item.title;
-      renderSelectedChip();
+      syncSelectionUI();
       renderInlineResults();
       renderCategories();
       renderAz();
       saveDraft();
     }
 
-    function clearSelection() {
-      selectedId = null;
-      selectedTitle = "";
-      renderSelectedChip();
-      renderInlineResults();
-      renderCategories();
-      renderAz();
-      saveDraft();
-    }
 
     function saveDraft() {
       const schemaValues = getSchemaValues();
@@ -736,7 +715,7 @@ const DashMsgUI = (() => {
         dynamicFields.innerHTML = "";
         dynamicFields.hidden = true;
         draftSchemaValues = {};
-        renderSelectedChip();
+        syncSelectionUI();
         renderInlineResults();
         renderCategories();
         renderAz();
@@ -766,14 +745,13 @@ const DashMsgUI = (() => {
     };
 
     close.onclick = () => closeWithDiscardFlow();
-    selectedClear.onclick = () => clearSelection();
 
     search.addEventListener("input", () => {
       if (selectedTitle && search.value.trim() !== selectedTitle.trim()) {
         selectedId = null;
         selectedTitle = "";
       }
-      renderSelectedChip();
+      syncSelectionUI();
       renderInlineResults();
       saveDraft();
     });
@@ -861,7 +839,7 @@ const DashMsgUI = (() => {
         setPanelState("minimized");
       }
 
-      renderSelectedChip();
+      syncSelectionUI();
       renderInlineResults();
       renderCategories();
       renderAz();
@@ -871,7 +849,7 @@ const DashMsgUI = (() => {
 
     restoreDraft();
     if (!hasDraft() && panelState !== "closed") panelState = "closed";
-    renderSelectedChip();
+    syncSelectionUI();
     renderInlineResults();
     renderCategories();
     renderAz();
