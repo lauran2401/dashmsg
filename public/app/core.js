@@ -7,6 +7,7 @@ const DashMsg = (() => {
   const DEBUG_KEY = "dashmsg_debug";
   const API_LOG_URL = "/api/log";
   const API_FB_URL = "/api/feedback";
+  const CUSTOMER_NAME_KEY = "dashmsg_customer_name";
 
   const params = new URLSearchParams(location.search);
   const returnUrl = params.get("return");
@@ -149,6 +150,87 @@ const DashMsg = (() => {
       .trim();
   }
 
+  function showToast(type, message) {
+    if (!window.DashMsgUI?.toast) return;
+    const ok = type === "success";
+    window.DashMsgUI.toast(message, ok);
+  }
+
+  function getCustomerName() {
+    return (localStorage.getItem(CUSTOMER_NAME_KEY) || "").trim();
+  }
+
+  function clearCustomerName() {
+    localStorage.removeItem(CUSTOMER_NAME_KEY);
+    const input = document.getElementById("customerName");
+    if (input) input.value = "";
+  }
+
+  function applyCustomerName(template) {
+    const name = getCustomerName();
+
+    if (!name) {
+      return template
+        .replace(/\{name\}\s*/g, "")
+        .replace(/\s{2,}/g, " ")
+        .trim();
+    }
+
+    return template
+      .replaceAll("{name}", name)
+      .replace(/\s{2,}/g, " ")
+      .trim();
+  }
+
+  async function copyText(text) {
+    if (!text || !text.trim()) return false;
+
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        return true;
+      }
+    } catch (err) {}
+
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.setAttribute("readonly", "");
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      ta.style.pointerEvents = "none";
+      document.body.appendChild(ta);
+      ta.focus();
+      ta.select();
+
+      const ok = document.execCommand("copy");
+      document.body.removeChild(ta);
+      return !!ok;
+    } catch (err) {
+      return false;
+    }
+  }
+
+  async function copyCustomerMessage(template) {
+    const finalMessage = applyCustomerName(template);
+
+    if (!finalMessage) {
+      showToast("error", "No message generated");
+      return false;
+    }
+
+    const copied = await copyText(finalMessage);
+
+    if (copied) {
+      clearCustomerName();
+      showToast("success", "Message copied");
+      return true;
+    }
+
+    showToast("error", "Copy failed");
+    return false;
+  }
+
   async function copyToClipboard(text) {
     const value = String(text || "");
     try {
@@ -261,9 +343,12 @@ const DashMsg = (() => {
 
     const final = withEmoji(output, state.prefs.emoji_on);
     await logEvent(key, category, { used_name: usedName, ...extras });
-    const copied = await copyToClipboard(final);
+    const isCustomerFacing = ["Pickup", "Delivery", "Shopping"].includes(category);
+    const copied = isCustomerFacing
+      ? await copyCustomerMessage(final)
+      : await copyToClipboard(final);
 
-    if (window.DashMsgUI?.toast) window.DashMsgUI.toast(final, copied);
+    if (!isCustomerFacing && window.DashMsgUI?.toast) window.DashMsgUI.toast(final, copied);
 
     if (returnUrl) {
       window.location.href = returnUrl + encodeURIComponent(final);

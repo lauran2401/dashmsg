@@ -12,8 +12,7 @@ const DashMsgMenus = {
       },
       {
         items: [
-          { label: "Settings", more: true, action: { type: "nav", screen: "settings" } },
-          { label: "Cancel", class: "destructive", action: { type: "cancel" } }
+          { label: "Settings", more: true, action: { type: "nav", screen: "settings" } }
         ]
       }
     ]
@@ -118,8 +117,7 @@ const DashMsgMenus = {
         header: "Tester",
         items: [
           { label: "Beta", more: true, action: { type: "function", name: "openBeta" } },
-          { label: "Reset All Data", class: "destructive", action: { type: "function", name: "resetAll" } },
-          { label: "Cancel", class: "destructive", action: { type: "cancel" } }
+          { label: "Reset All Data", class: "destructive", action: { type: "function", name: "resetAll" } }
         ]
       }
     ]
