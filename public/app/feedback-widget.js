@@ -1,7 +1,7 @@
 // public/app/feedback-widget.js
 
 const FEEDBACK_RECENTS_KEY = "dashmsg_feedback_recents_v1";
-const FEEDBACK_DRAFT_KEY = "dashmsg_feedback_draft_v1";
+const FEEDBACK_DRAFT_KEY = "dashmsg_feedback_draft_v2";
 
 const FEEDBACK_SUGGESTIONS = [
   {
@@ -74,43 +74,14 @@ const FEEDBACK_SUGGESTIONS = [
 ];
 
 function normalize(str) {
-  return (str || "").toLowerCase().trim();
+  return String(str || "").toLowerCase().trim();
 }
 
-function scoreSuggestion(s, query) {
-  const q = normalize(query);
-  if (!q) return 0;
-
-  const title = normalize(s.title);
-  const aliases = (s.aliases || []).map(normalize);
-  const tags = (s.tags || []).map(normalize);
-
-  let score = 0;
-
-  if (title === q) score += 100;
-  if (title.startsWith(q)) score += 60;
-  if (title.includes(q)) score += 40;
-
-  for (const a of aliases) {
-    if (a === q) score += 50;
-    else if (a.startsWith(q)) score += 30;
-    else if (a.includes(q)) score += 20;
-  }
-
-  for (const t of tags) {
-    if (t === q) score += 25;
-    else if (t.includes(q)) score += 10;
-  }
-
-  // crude fuzzy help
-  const words = q.split(/\s+/).filter(Boolean);
-  for (const w of words) {
-    if (title.includes(w)) score += 8;
-    for (const a of aliases) if (a.includes(w)) score += 5;
-    for (const t of tags) if (t.includes(w)) score += 3;
-  }
-
-  return score;
+function el(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text != null) node.textContent = text;
+  return node;
 }
 
 function getRecentIds() {
@@ -122,9 +93,9 @@ function getRecentIds() {
 }
 
 function saveRecentId(id) {
-  const current = getRecentIds().filter(x => x !== id);
-  current.unshift(id);
-  localStorage.setItem(FEEDBACK_RECENTS_KEY, JSON.stringify(current.slice(0, 5)));
+  const next = getRecentIds().filter(x => x !== id);
+  next.unshift(id);
+  localStorage.setItem(FEEDBACK_RECENTS_KEY, JSON.stringify(next.slice(0, 5)));
 }
 
 function loadDraft() {
@@ -143,16 +114,55 @@ function clearDraft() {
   localStorage.removeItem(FEEDBACK_DRAFT_KEY);
 }
 
-function el(tag, className, text) {
-  const node = document.createElement(tag);
-  if (className) node.className = className;
-  if (text != null) node.textContent = text;
-  return node;
+function scoreSuggestion(item, query) {
+  const q = normalize(query);
+  if (!q) return 0;
+
+  const title = normalize(item.title);
+  const aliases = (item.aliases || []).map(normalize);
+  const tags = (item.tags || []).map(normalize);
+  const allText = [title, ...aliases, ...tags].join(" ");
+
+  let score = 0;
+
+  if (title === q) score += 100;
+  else if (title.startsWith(q)) score += 80;
+  else if (title.includes(q)) score += 55;
+
+  for (const alias of aliases) {
+    if (alias === q) score += 70;
+    else if (alias.startsWith(q)) score += 50;
+    else if (alias.includes(q)) score += 30;
+  }
+
+  for (const tag of tags) {
+    if (tag === q) score += 30;
+    else if (tag.includes(q)) score += 12;
+  }
+
+  const words = q.split(/\s+/).filter(Boolean);
+  for (const word of words) {
+    if (allText.includes(word)) score += 8;
+  }
+
+  return score;
+}
+
+function getMatches(query) {
+  const q = normalize(query);
+  if (!q) return [];
+
+  const scored = FEEDBACK_SUGGESTIONS
+    .map(item => ({ item, score: scoreSuggestion(item, q) }))
+    .filter(x => x.score >= 18) // weak-match cutoff
+    .sort((a, b) => b.score - a.score);
+
+  return scored.map(x => x.item);
 }
 
 export function mountFeedbackWidget({
   mount = document.body,
-  onSubmit = async (payload) => {
+  onSubmit = async payload => {
     console.log("Feedback submit", payload);
     return { ok: true };
   }
@@ -226,15 +236,21 @@ export function mountFeedbackWidget({
   clearBtn.addEventListener("click", () => {
     query = "";
     expandedSuggestions = false;
+    if (!selected) draftFields = {};
+    persistDraft();
     render();
     search.focus();
   });
 
   search.addEventListener("input", () => {
     query = search.value;
-    selected = null;
-    draftFields = {};
     expandedSuggestions = false;
+
+    if (selected && normalize(query) !== normalize(selected.title)) {
+      selected = null;
+      draftFields = {};
+    }
+
     persistDraft();
     render();
   });
@@ -256,26 +272,25 @@ export function mountFeedbackWidget({
   }
 
   function getRecentSuggestions() {
-    const ids = getRecentIds();
-    return ids
-      .map(id => FEEDBACK_SUGGESTIONS.find(s => s.id === id))
+    return getRecentIds()
+      .map(id => FEEDBACK_SUGGESTIONS.find(x => x.id === id))
       .filter(Boolean)
-      .slice(0, 5);
+      .slice(0, 3);
   }
 
-  function getMatches() {
-    const q = normalize(query);
-    if (!q) return [];
-    return FEEDBACK_SUGGESTIONS
-      .map(s => ({ s, score: scoreSuggestion(s, q) }))
-      .filter(x => x.score > 0)
-      .sort((a, b) => b.score - a.score)
-      .map(x => x.s);
+  function isFormValid() {
+    if (!selected?.schema?.fields?.length) return false;
+    const fields = selected.schema.fields;
+    return fields.every(field => {
+      if (!field.required) return true;
+      return String(draftFields[field.key] || "").trim().length > 0;
+    });
   }
 
   function renderRecents() {
     recentsWrap.innerHTML = "";
-    if (query.trim()) return;
+
+    if (query.trim() || selected) return;
 
     const recents = getRecentSuggestions();
     if (!recents.length) return;
@@ -290,6 +305,7 @@ export function mountFeedbackWidget({
         draftFields = {};
         persistDraft();
         render();
+        focusFirstFieldSoon();
       });
       row.appendChild(chip);
     });
@@ -298,22 +314,25 @@ export function mountFeedbackWidget({
 
   function renderResults() {
     resultsWrap.innerHTML = "";
+
+    // hide suggestions after a selection
+    if (selected) return;
     if (!query.trim()) return;
 
-    const matches = getMatches();
+    const matches = getMatches(query);
     const visible = expandedSuggestions ? matches : matches.slice(0, 5);
 
     if (!matches.length) {
-      const addBtn = el("button", "fb-result fb-add", "＋ Add new feedback");
+      const addBtn = el("button", "fb-result fb-add", "＋ Something else");
       addBtn.type = "button";
       addBtn.addEventListener("click", () => {
         selected = {
           id: "custom_feedback",
-          title: query.trim() || "New feedback",
+          title: "Something else",
           schema: {
-            title: "Add new feedback",
+            title: "Something else",
             fields: [
-              { key: "change", label: "What do you want to change?", type: "textarea", required: true },
+              { key: "change", label: "What kind of feedback is this?", type: "textarea", required: true },
               { key: "why", label: "Why would this help?", type: "textarea", required: false }
             ]
           }
@@ -321,6 +340,7 @@ export function mountFeedbackWidget({
         draftFields = { change: query.trim() };
         persistDraft();
         render();
+        focusFirstFieldSoon();
       });
       resultsWrap.appendChild(addBtn);
       return;
@@ -335,6 +355,7 @@ export function mountFeedbackWidget({
         draftFields = {};
         persistDraft();
         render();
+        focusFirstFieldSoon();
       });
       resultsWrap.appendChild(btn);
     });
@@ -359,6 +380,7 @@ export function mountFeedbackWidget({
     const remove = el("button", "fb-selected-remove", "×");
     remove.type = "button";
     remove.title = "Clear selection";
+    remove.setAttribute("aria-label", "Clear selection");
     remove.addEventListener("click", () => {
       selected = null;
       draftFields = {};
@@ -366,6 +388,7 @@ export function mountFeedbackWidget({
       render();
       search.focus();
     });
+
     chip.append(label, remove);
     selectedWrap.appendChild(chip);
   }
@@ -373,12 +396,10 @@ export function mountFeedbackWidget({
   function renderForm() {
     formWrap.innerHTML = "";
     footer.hidden = true;
-    if (!selected?.schema) return;
 
-    const fields = selected.schema.fields || [];
-    if (!fields.length) return;
+    if (!selected?.schema?.fields?.length) return;
 
-    fields.forEach(field => {
+    selected.schema.fields.forEach(field => {
       const group = el("div", "fb-field");
       const label = el("label", "fb-label", field.label);
 
@@ -394,9 +415,11 @@ export function mountFeedbackWidget({
       input.name = field.key;
       input.required = !!field.required;
       input.value = draftFields[field.key] || "";
+      input.placeholder = field.label;
       input.addEventListener("input", () => {
         draftFields[field.key] = input.value;
         persistDraft();
+        updateSubmitState();
       });
 
       group.append(label, input);
@@ -404,11 +427,23 @@ export function mountFeedbackWidget({
     });
 
     footer.hidden = false;
+    updateSubmitState();
+  }
+
+  function updateSubmitState() {
+    submitBtn.disabled = !isFormValid();
+  }
+
+  function focusFirstFieldSoon() {
+    setTimeout(() => {
+      const first = formWrap.querySelector(".fb-input");
+      if (first) first.focus();
+    }, 0);
   }
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!selected) return;
+    if (!isFormValid()) return;
 
     const payload = {
       suggestionId: selected.id,
@@ -422,6 +457,7 @@ export function mountFeedbackWidget({
     try {
       await onSubmit(payload);
       if (selected.id !== "custom_feedback") saveRecentId(selected.id);
+
       clearDraft();
       query = "";
       selected = null;
@@ -438,20 +474,12 @@ export function mountFeedbackWidget({
   function render() {
     panel.hidden = !isOpen;
     search.value = query;
-
     renderRecents();
     renderResults();
     renderSelected();
     renderForm();
-
-    const hasAnything =
-      query.trim() ||
-      selected ||
-      Object.keys(draftFields).length > 0 ||
-      getRecentSuggestions().length;
-
+    updateSubmitState();
     root.classList.toggle("fb-open", isOpen);
-    root.classList.toggle("fb-has-content", !!hasAnything);
   }
 
   restoreDraft();
