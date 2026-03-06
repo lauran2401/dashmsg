@@ -185,6 +185,11 @@ function group(key) {
   function resetAll() {
     if (!confirm("Clear ALL DashMsg data?")) return;
     localStorage.removeItem("dashmsg_state");
+    localStorage.removeItem("dashmsg_customer_name");
+    localStorage.removeItem("dashmsg_tester_id");
+    localStorage.removeItem("dashmsg_debug");
+    localStorage.removeItem("dashmsg_feedback_draft_v3");
+    localStorage.removeItem("dashmsg_beta_queue");
     window.DashMsg?.setDebug?.(false);
     window.DashMsgUI?.toast?.("Reset", true, "Saved");
     location.reload();

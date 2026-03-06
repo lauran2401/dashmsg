@@ -18,7 +18,6 @@ const DashMsg = (() => {
   let state = {
     prefs: {
       emoji_on: true,
-      name_prompt: true,
       hotbag_default: true
     },
     overrides: {
@@ -167,18 +166,15 @@ const DashMsg = (() => {
   }
 
   function applyCustomerName(template) {
+    const output = String(template || "");
     const name = getCustomerName();
+    const greeting = name ? `Hi, ${name}!` : "Hi!";
 
-    if (!name) {
-      return template
-        .replace(/\{name\}\s*/g, "")
-        .replace(/\s{2,}/g, " ")
-        .trim();
-    }
-
-    return template
+    return output
+      .replaceAll("{greeting}", greeting)
       .replaceAll("{name}", name)
       .replace(/\s{2,}/g, " ")
+      .replace(/\s+([,.!?])/g, "$1")
       .trim();
   }
 
@@ -197,14 +193,16 @@ const DashMsg = (() => {
       ta.value = text;
       ta.setAttribute("readonly", "");
       ta.style.position = "fixed";
+      ta.style.left = "-9999px";
+      ta.style.top = "0";
       ta.style.opacity = "0";
-      ta.style.pointerEvents = "none";
       document.body.appendChild(ta);
       ta.focus();
       ta.select();
+      ta.setSelectionRange(0, ta.value.length);
 
       const ok = document.execCommand("copy");
-      document.body.removeChild(ta);
+      ta.remove();
       return !!ok;
     } catch (err) {
       return false;
@@ -216,7 +214,7 @@ const DashMsg = (() => {
 
     if (!finalMessage) {
       showToast("error", "No message generated");
-      return false;
+      return { copied: false, text: "" };
     }
 
     const copied = await copyText(finalMessage);
@@ -224,36 +222,16 @@ const DashMsg = (() => {
     if (copied) {
       clearCustomerName();
       showToast("success", "Message copied");
-      return true;
+      return { copied: true, text: finalMessage };
     }
 
-    showToast("error", "Copy failed");
-    return false;
+    alert(finalMessage);
+    showToast("error", "Copy failed - message shown for manual copy");
+    return { copied: false, text: finalMessage };
   }
 
   async function copyToClipboard(text) {
-    const value = String(text || "");
-    try {
-      if (navigator.clipboard && window.isSecureContext) {
-        await navigator.clipboard.writeText(value);
-        return true;
-      }
-    } catch {}
-
-    try {
-      const el = document.createElement("textarea");
-      el.value = value;
-      el.setAttribute("readonly", "");
-      el.style.position = "fixed";
-      el.style.top = "-9999px";
-      document.body.appendChild(el);
-      el.select();
-      const ok = document.execCommand("copy");
-      el.remove();
-      return !!ok;
-    } catch {
-      return false;
-    }
+    return copyText(String(text || ""));
   }
 
   function getVersions() {
@@ -332,26 +310,26 @@ const DashMsg = (() => {
       output = renderTemplate(output, { STORE: extras.store });
     }
 
-    let usedName = 0;
-    if (state.prefs.name_prompt && output.startsWith("Hi!")) {
-      const name = prompt("Customer name? (Cancel to skip)") || "";
-      if (name.trim()) {
-        output = output.replace(/^Hi!/, `Hi, ${name.trim()}!`);
-        usedName = 1;
-      }
-    }
-
     const final = withEmoji(output, state.prefs.emoji_on);
+    const usedName = getCustomerName() ? 1 : 0;
     await logEvent(key, category, { used_name: usedName, ...extras });
     const isCustomerFacing = ["Pickup", "Delivery", "Shopping"].includes(category);
-    const copied = isCustomerFacing
-      ? await copyCustomerMessage(final)
-      : await copyToClipboard(final);
+
+    let copied = false;
+    let finalOutput = final;
+
+    if (isCustomerFacing) {
+      const result = await copyCustomerMessage(final);
+      copied = result.copied;
+      finalOutput = result.text;
+    } else {
+      copied = await copyToClipboard(final);
+    }
 
     if (!isCustomerFacing && window.DashMsgUI?.toast) window.DashMsgUI.toast(final, copied);
 
-    if (returnUrl) {
-      window.location.href = returnUrl + encodeURIComponent(final);
+    if (copied && returnUrl) {
+      window.location.href = returnUrl + encodeURIComponent(finalOutput);
     }
   }
 
@@ -451,8 +429,7 @@ const DashMsg = (() => {
 
     window.DashMsgUI?.populateShoppingMenu?.();
     await flushFeedbackQueue();
-    window.DashMsgUI?.navigateTo?.("main", { push: true });
-    window.DashMsgUI?.initFeedbackCommandPalette?.();
+    window.DashMsgUI?.navigateTo?.("main", { push: false });
   }
 
   return {
