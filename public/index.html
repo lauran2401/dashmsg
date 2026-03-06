@@ -13,45 +13,9 @@
 <body>
   <div class="container" id="app"></div>
 
-  <button id="beta-fab" class="feedback-button" type="button" title="Feedback" aria-label="Send feedback">
-    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false">
-      <path fill="currentColor" d="M4 5a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H9.6l-3.95 3.2c-.66.53-1.65.06-1.65-.79V5zm3-1a1 1 0 0 0-1 1v11.48L8.9 14H17a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1H7z"/>
-    </svg>
-  </button>
-  <button id="beta-minibar" type="button" aria-label="Restore feedback draft" title="Restore feedback draft">
-    <span class="beta-minibar-icon" aria-hidden="true">↗</span>
-    <span>Feedback draft</span>
-  </button>
+ 
 
-  <div id="beta-panel" role="dialog" aria-label="DashMsg Feedback">
-    <div class="beta-header">
-      <div>
-        <div class="beta-title">Feedback</div>
-        <div class="beta-subtitle">Report an issue or suggest an improvement</div>
-      </div>
-      <div class="beta-header-actions">
-        <button id="beta-minimize" class="beta-icon-btn" aria-label="Minimize feedback" title="Minimize">—</button>
-        <button id="beta-close" class="beta-icon-btn" aria-label="Close feedback" title="Close">✕</button>
-      </div>
-    </div>
-
-    <input id="beta-search" placeholder="Search feedback..." autocomplete="off" />
-
-    <div id="beta-inline-results" tabindex="0"></div>
-
-    <div id="beta-browse" class="beta-browse">
-      <button id="beta-browse-cats" type="button" class="beta-disclosure" aria-expanded="false">Browse by category <span aria-hidden="true">▸</span></button>
-      <div id="beta-cats-list" class="beta-disclosure-body" hidden></div>
-      <button id="beta-browse-az" type="button" class="beta-disclosure" aria-expanded="false">Browse A–Z <span aria-hidden="true">▸</span></button>
-      <div id="beta-az-list" class="beta-disclosure-body" hidden></div>
-    </div>
-
-    <div id="beta-dynamic-fields" class="beta-dynamic-fields" hidden></div>
-
-    <div class="beta-actions">
-      <button id="beta-send" class="beta-send">Send</button>
-    </div>
-  </div>
+ l
 
   <script type="module" src="./app/ui.js"></script>
   <script type="module" src="./app/editors.js"></script>
