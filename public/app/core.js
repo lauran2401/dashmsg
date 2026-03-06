@@ -174,6 +174,7 @@ const DashMsg = (() => {
       .replaceAll("{greeting}", greeting)
       .replaceAll("{name}", name)
       .replace(/\s{2,}/g, " ")
+      .replace(/\s+([,.!?])/g, "$1")
       .trim();
   }
 
@@ -192,14 +193,16 @@ const DashMsg = (() => {
       ta.value = text;
       ta.setAttribute("readonly", "");
       ta.style.position = "fixed";
+      ta.style.left = "-9999px";
+      ta.style.top = "0";
       ta.style.opacity = "0";
-      ta.style.pointerEvents = "none";
       document.body.appendChild(ta);
       ta.focus();
       ta.select();
+      ta.setSelectionRange(0, ta.value.length);
 
       const ok = document.execCommand("copy");
-      document.body.removeChild(ta);
+      ta.remove();
       return !!ok;
     } catch (err) {
       return false;
@@ -308,7 +311,8 @@ const DashMsg = (() => {
     }
 
     const final = withEmoji(output, state.prefs.emoji_on);
-    await logEvent(key, category, { ...extras });
+    const usedName = getCustomerName() ? 1 : 0;
+    await logEvent(key, category, { used_name: usedName, ...extras });
     const isCustomerFacing = ["Pickup", "Delivery", "Shopping"].includes(category);
 
     let copied = false;
@@ -426,7 +430,6 @@ const DashMsg = (() => {
     window.DashMsgUI?.populateShoppingMenu?.();
     await flushFeedbackQueue();
     window.DashMsgUI?.navigateTo?.("main", { push: false });
-    window.DashMsgUI?.initFeedbackCommandPalette?.();
   }
 
   return {
