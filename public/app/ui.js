@@ -3,6 +3,7 @@
 const LS_RECENT = "dashmsg_beta_recent";
 const LS_PINS = "dashmsg_beta_pins";
 const LS_QUEUE = "dashmsg_beta_queue";
+const LS_DRAFT = "feedbackDraft";
 
 function lsGet(key, fallback) {
   try { return JSON.parse(localStorage.getItem(key) || ""); } catch { return fallback; }
@@ -457,6 +458,7 @@ const DashMsgUI = (() => {
 
   function initFeedbackCommandPalette() {
     const fab = document.getElementById("beta-fab");
+    const miniBar = document.getElementById("beta-minibar");
     const panel = document.getElementById("beta-panel");
     const close = document.getElementById("beta-close");
     const search = document.getElementById("beta-search");
@@ -465,161 +467,202 @@ const DashMsgUI = (() => {
     const notes = document.getElementById("beta-notes");
     const send = document.getElementById("beta-send");
 
-    if (!fab || !panel || !search || !tabs || !results || !notes || !send) return;
+    if (!fab || !miniBar || !panel || !search || !tabs || !results || !notes || !send) return;
+
+    const duplicates = document.querySelectorAll("#beta-fab");
+    if (duplicates.length > 1) {
+      duplicates.forEach((el, idx) => { if (idx > 0) el.remove(); });
+    }
 
     let activeTab = "recent";
     let selectedId = null;
     let selectedIndex = 0;
-    let isOpen = false;
 
-    const pins = lsGet(LS_PINS, []);
-    const recents = lsGet(LS_RECENT, []);
+    const FeedbackStateManager = (() => {
+      let panelState = "closed";
+      const get = () => panelState;
+      const set = (next) => {
+        panelState = next;
+        panel.style.display = panelState === "closed" ? "none" : "block";
+        panel.classList.toggle("is-open", panelState === "open");
+        panel.classList.toggle("is-minimized", panelState === "minimized");
+        miniBar.style.display = panelState === "minimized" ? "block" : "none";
+        fab.classList.toggle("is-attached", panelState === "open");
+        fab.setAttribute("aria-label", panelState === "open" ? "Minimize feedback" : "Send feedback");
+        fab.title = panelState === "open" ? "Minimize feedback" : "Send feedback";
+        fab.innerHTML = panelState === "open" ? "—" : fab.dataset.defaultIcon;
+        if (panelState === "open") setTimeout(() => search.focus(), 0);
+      };
+      return { get, set };
+    })();
 
-    function setActiveTabUI() {
-      tabs.querySelectorAll(".beta-tab").forEach((b) => {
-        b.classList.toggle("is-active", b.dataset.tab === activeTab);
-      });
-    }
+    const FeedbackPanel = (() => {
+      const pins = lsGet(LS_PINS, []);
+      const recents = lsGet(LS_RECENT, []);
 
-    function applySelection() {
-      const items = [...results.querySelectorAll(".beta-item")];
-      items.forEach((el, i) => el.classList.toggle("is-selected", i === selectedIndex));
-      const selected = items[selectedIndex];
-      if (selected?.dataset?.id) selectedId = selected.dataset.id;
-    }
-
-    function rowHtml(it) {
-      const meta = pins.includes(it.id) ? "Pinned" : (recents.includes(it.id) ? "Recent" : "");
-      return `
-        <div class="beta-item" data-id="${it.id}">
-          <div class="beta-item-main">
-            <div class="beta-item-title">${it.title}</div>
-            <div class="beta-item-desc">${it.desc}</div>
-          </div>
-          <div class="beta-item-meta">${meta}</div>
-        </div>
-      `;
-    }
-
-    function renderItems(list, withGroup) {
-      if (withGroup) {
-        const byCat = {};
-        list.forEach((it) => {
-          byCat[it.cat] = byCat[it.cat] || [];
-          byCat[it.cat].push(it);
+      function setActiveTabUI() {
+        tabs.querySelectorAll(".beta-tab").forEach((b) => {
+          b.classList.toggle("is-active", b.dataset.tab === activeTab);
         });
-        let html = "";
-        Object.keys(byCat).forEach((cat) => {
-          html += `<div class="beta-group">${cat}</div>`;
-          html += byCat[cat].map((it) => rowHtml(it)).join("");
-        });
-        return html;
       }
-      return list.map((it) => rowHtml(it)).join("");
-    }
 
-    function getTabItems() {
-      const q = norm(search.value);
-      if (activeTab === "categories") return [];
-      if (activeTab === "all") {
-        const scored = FEEDBACK_CATALOG
-          .map((it) => ({ it, s: scoreItem(q, it) }))
-          .filter((x) => (q ? x.s > 0 : true))
-          .sort((a, b) => b.s - a.s);
-
-        const pinnedItems = FEEDBACK_CATALOG.filter((it) => pins.includes(it.id));
-        const recentItems = FEEDBACK_CATALOG.filter((it) => recents.includes(it.id));
-        return uniqueById([...pinnedItems, ...recentItems, ...scored.map((x) => x.it)]);
+      function applySelection() {
+        const items = [...results.querySelectorAll(".beta-item")];
+        items.forEach((el, i) => el.classList.toggle("is-selected", i === selectedIndex));
+        const selected = items[selectedIndex];
+        if (selected?.dataset?.id) selectedId = selected.dataset.id;
       }
-      const recentItems = FEEDBACK_CATALOG.filter((it) => recents.includes(it.id));
-      const pinnedItems = FEEDBACK_CATALOG.filter((it) => pins.includes(it.id));
-      return uniqueById([...pinnedItems, ...recentItems]);
-    }
 
-    function renderCategories() {
-      const cats = [...new Set(FEEDBACK_CATALOG.map((x) => x.cat))].sort();
-      const q = norm(search.value);
-      const filtered = q ? cats.filter((c) => norm(c).includes(q)) : cats;
-      const html = filtered.map((cat) => {
-        const count = FEEDBACK_CATALOG.filter((x) => x.cat === cat).length;
+      function rowHtml(it) {
+        const meta = pins.includes(it.id) ? "Pinned" : (recents.includes(it.id) ? "Recent" : "");
         return `
-          <div class="beta-item" data-cat="${cat}">
+          <div class="beta-item" data-id="${it.id}">
             <div class="beta-item-main">
-              <div class="beta-item-title">${cat}</div>
-              <div class="beta-item-desc">${count} options</div>
+              <div class="beta-item-title">${it.title}</div>
+              <div class="beta-item-desc">${it.desc}</div>
             </div>
-            <div class="beta-item-meta"></div>
+            <div class="beta-item-meta">${meta}</div>
           </div>
         `;
-      }).join("");
-      results.innerHTML = html || `<div class="beta-item"><div class="beta-item-main"><div class="beta-item-title">No categories</div></div></div>`;
-      selectedIndex = 0;
-      applySelection();
-    }
-
-    function render() {
-      if (activeTab === "categories") {
-        renderCategories();
-        return;
       }
-      const list = getTabItems();
-      results.innerHTML = list.length
-        ? renderItems(list, true)
-        : (activeTab === "recent"
-          ? `<div class="beta-item"><div class="beta-item-main"><div class="beta-item-title">No recent feedback</div><div class="beta-item-desc">Use “All” to pick a suggestion.</div></div></div>`
-          : `<div class="beta-item"><div class="beta-item-main"><div class="beta-item-title">No matches</div><div class="beta-item-desc">Try different keywords.</div></div></div>`);
-      selectedIndex = 0;
-      applySelection();
-    }
 
-    function open() {
-      if (isOpen) {
-        panel.style.display = "none";
-        isOpen = false;
-        return;
+      function renderItems(list, withGroup) {
+        if (withGroup) {
+          const byCat = {};
+          list.forEach((it) => {
+            byCat[it.cat] = byCat[it.cat] || [];
+            byCat[it.cat].push(it);
+          });
+          let html = "";
+          Object.keys(byCat).forEach((cat) => {
+            html += `<div class="beta-group">${cat}</div>`;
+            html += byCat[cat].map((it) => rowHtml(it)).join("");
+          });
+          return html;
+        }
+        return list.map((it) => rowHtml(it)).join("");
       }
-      panel.style.display = "block";
-      isOpen = true;
-      setActiveTabUI();
-      render();
-      setTimeout(() => search.focus(), 0);
+
+      function getTabItems() {
+        const q = norm(search.value);
+        if (activeTab === "categories") return [];
+        if (activeTab === "all") {
+          const scored = FEEDBACK_CATALOG
+            .map((it) => ({ it, s: scoreItem(q, it) }))
+            .filter((x) => (q ? x.s > 0 : true))
+            .sort((a, b) => b.s - a.s);
+
+          const pinnedItems = FEEDBACK_CATALOG.filter((it) => pins.includes(it.id));
+          const recentItems = FEEDBACK_CATALOG.filter((it) => recents.includes(it.id));
+          return uniqueById([...pinnedItems, ...recentItems, ...scored.map((x) => x.it)]);
+        }
+        const recentItems = FEEDBACK_CATALOG.filter((it) => recents.includes(it.id));
+        const pinnedItems = FEEDBACK_CATALOG.filter((it) => pins.includes(it.id));
+        return uniqueById([...pinnedItems, ...recentItems]);
+      }
+
+      function renderCategories() {
+        const cats = [...new Set(FEEDBACK_CATALOG.map((x) => x.cat))].sort();
+        const q = norm(search.value);
+        const filtered = q ? cats.filter((c) => norm(c).includes(q)) : cats;
+        const html = filtered.map((cat) => {
+          const count = FEEDBACK_CATALOG.filter((x) => x.cat === cat).length;
+          return `
+            <div class="beta-item" data-cat="${cat}">
+              <div class="beta-item-main">
+                <div class="beta-item-title">${cat}</div>
+                <div class="beta-item-desc">${count} options</div>
+              </div>
+              <div class="beta-item-meta"></div>
+            </div>
+          `;
+        }).join("");
+        results.innerHTML = html || `<div class="beta-item"><div class="beta-item-main"><div class="beta-item-title">No categories</div></div></div>`;
+        selectedIndex = 0;
+        applySelection();
+      }
+
+      function render() {
+        if (activeTab === "categories") {
+          renderCategories();
+          return;
+        }
+        const list = getTabItems();
+        results.innerHTML = list.length
+          ? renderItems(list, true)
+          : (activeTab === "recent"
+            ? `<div class="beta-item"><div class="beta-item-main"><div class="beta-item-title">No recent feedback</div><div class="beta-item-desc">Use “All” to pick a suggestion.</div></div></div>`
+            : `<div class="beta-item"><div class="beta-item-main"><div class="beta-item-title">No matches</div><div class="beta-item-desc">Try different keywords.</div></div></div>`);
+        selectedIndex = 0;
+        applySelection();
+      }
+
+      function pushRecent(id) {
+        const r = lsGet(LS_RECENT, []);
+        const next = [id, ...r.filter((x) => x !== id)].slice(0, 12);
+        lsSet(LS_RECENT, next);
+      }
+
+      return { setActiveTabUI, render, pushRecent };
+    })();
+
+    const FeedbackButton = (() => {
+      fab.dataset.defaultIcon = fab.innerHTML;
+
+      function openPanel() {
+        FeedbackStateManager.set("open");
+      }
+
+      function minimizePanel() {
+        FeedbackStateManager.set("minimized");
+      }
+
+      function closePanel() {
+        FeedbackStateManager.set("closed");
+        selectedId = null;
+        selectedIndex = 0;
+      }
+
+      function toggle() {
+        if (FeedbackStateManager.get() === "open") {
+          minimizePanel();
+          return;
+        }
+        openPanel();
+      }
+
+      return { openPanel, minimizePanel, closePanel, toggle };
+    })();
+
+    function hydrateDraft() {
+      notes.value = localStorage.getItem(LS_DRAFT) || notes.value || "";
     }
 
-    function hide() {
-      panel.style.display = "none";
-      isOpen = false;
-      selectedId = null;
-      selectedIndex = 0;
+    function persistDraft() {
+      localStorage.setItem(LS_DRAFT, notes.value || "");
     }
-
-    fab.onclick = open;
-    close.onclick = hide;
-
-    document.addEventListener("pointerdown", (e) => {
-      if (!isOpen) return;
-      if (e.target === panel || panel.contains(e.target) || e.target === fab) return;
-      hide();
-    });
 
     tabs.onclick = (e) => {
       const btn = e.target.closest("[data-tab]");
       if (!btn) return;
       activeTab = btn.dataset.tab;
-      setActiveTabUI();
-      render();
+      FeedbackPanel.setActiveTabUI();
+      FeedbackPanel.render();
     };
 
     search.oninput = () => {
       activeTab = "all";
-      setActiveTabUI();
-      render();
+      FeedbackPanel.setActiveTabUI();
+      FeedbackPanel.render();
     };
+
+    notes.addEventListener("input", persistDraft);
 
     function selectByIndex(i) {
       const items = [...results.querySelectorAll(".beta-item")];
       if (!items.length) return;
       selectedIndex = Math.max(0, Math.min(i, items.length - 1));
-      applySelection();
+      items.forEach((el, idx) => el.classList.toggle("is-selected", idx === selectedIndex));
       items[selectedIndex].scrollIntoView({ block: "nearest" });
     }
 
@@ -631,9 +674,9 @@ const DashMsgUI = (() => {
 
       if (cat) {
         activeTab = "all";
-        setActiveTabUI();
+        FeedbackPanel.setActiveTabUI();
         search.value = cat;
-        render();
+        FeedbackPanel.render();
         return;
       }
 
@@ -645,36 +688,21 @@ const DashMsgUI = (() => {
     };
 
     panel.addEventListener("keydown", (e) => {
-      if (!isOpen) return;
-
-      if (e.key === "Escape") { e.preventDefault(); hide(); return; }
+      if (FeedbackStateManager.get() !== "open") return;
+      if (e.key === "Escape") { e.preventDefault(); FeedbackButton.closePanel(); return; }
       if (e.key === "ArrowDown") { e.preventDefault(); selectByIndex(selectedIndex + 1); return; }
       if (e.key === "ArrowUp") { e.preventDefault(); selectByIndex(selectedIndex - 1); return; }
-      if (e.key === "Enter") {
-        e.preventDefault();
-        const items = [...results.querySelectorAll(".beta-item")];
-        const el = items[selectedIndex];
-        if (!el) return;
-        const id = el.dataset.id;
-        const cat = el.dataset.cat;
-        if (cat) {
-          activeTab = "all";
-          setActiveTabUI();
-          search.value = cat;
-          render();
-        } else if (id) {
-          const it = FEEDBACK_CATALOG.find((x) => x.id === id);
-          selectedId = id;
-          if (it) search.value = it.title;
-        }
-      }
     });
 
-    function pushRecent(id) {
-      const r = lsGet(LS_RECENT, []);
-      const next = [id, ...r.filter((x) => x !== id)].slice(0, 12);
-      lsSet(LS_RECENT, next);
-    }
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && FeedbackStateManager.get() !== "closed") FeedbackButton.closePanel();
+    });
+
+    document.addEventListener("pointerdown", (e) => {
+      if (FeedbackStateManager.get() !== "open") return;
+      if (e.target === panel || panel.contains(e.target) || e.target === fab) return;
+      FeedbackButton.minimizePanel();
+    });
 
     async function enqueueOrSend(payload) {
       try {
@@ -691,9 +719,7 @@ const DashMsgUI = (() => {
     send.onclick = async () => {
       const qTitle = norm(search.value);
       let cmd = selectedId ? FEEDBACK_CATALOG.find((x) => x.id === selectedId) : null;
-      if (!cmd && qTitle) {
-        cmd = FEEDBACK_CATALOG.find((x) => norm(x.title) === qTitle) || null;
-      }
+      if (!cmd && qTitle) cmd = FEEDBACK_CATALOG.find((x) => norm(x.title) === qTitle) || null;
 
       const payload = {
         type: "smart_feedback",
@@ -706,10 +732,33 @@ const DashMsgUI = (() => {
       };
 
       const ok = await enqueueOrSend(payload);
-      if (cmd?.id) pushRecent(cmd.id);
-      hide();
+      if (cmd?.id) FeedbackPanel.pushRecent(cmd.id);
+      if (ok) localStorage.removeItem(LS_DRAFT);
+      FeedbackButton.closePanel();
       window.DashMsgUI?.toast?.(ok ? "Sent" : "Queued", true, "Saved");
     };
+
+    fab.onclick = () => {
+      if (FeedbackStateManager.get() === "closed") {
+        activeTab = activeTab || "recent";
+        FeedbackPanel.setActiveTabUI();
+        FeedbackPanel.render();
+        hydrateDraft();
+      }
+      FeedbackButton.toggle();
+    };
+
+    miniBar.onclick = () => {
+      hydrateDraft();
+      FeedbackButton.openPanel();
+    };
+
+    close.onclick = () => FeedbackButton.closePanel();
+
+    hydrateDraft();
+    FeedbackPanel.setActiveTabUI();
+    FeedbackPanel.render();
+    FeedbackStateManager.set("closed");
   }
 
 
