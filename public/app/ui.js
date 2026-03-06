@@ -287,8 +287,6 @@ const DashMsgUI = (() => {
       case "navBack":
         return navBack();
 
-      case "cancel":
-        return window.DashMsg?.exitApp?.();
 
       case "home":
         return goHome();
