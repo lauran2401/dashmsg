@@ -3,6 +3,21 @@
 const LS_RECENT = "dashmsg_beta_recent";
 const LS_QUEUE = "dashmsg_beta_queue";
 const LS_DRAFT = "dashmsg_feedback_draft";
+const CUSTOMER_NAME_KEY = "dashmsg_customer_name";
+
+function getCustomerName() {
+  return (localStorage.getItem(CUSTOMER_NAME_KEY) || "").trim();
+}
+
+function setCustomerName(value) {
+  localStorage.setItem(CUSTOMER_NAME_KEY, value || "");
+}
+
+function clearCustomerName() {
+  localStorage.removeItem(CUSTOMER_NAME_KEY);
+  const input = document.getElementById("customerName");
+  if (input) input.value = "";
+}
 
 function lsGet(key, fallback) {
   try { return JSON.parse(localStorage.getItem(key) || ""); } catch { return fallback; }
@@ -151,6 +166,18 @@ const DashMsgUI = (() => {
 
     let html = headerHtml(title);
 
+    if (currentScreen === "main") {
+      html += `
+        <div class="customer-name-wrap">
+          <label for="customerName">Customer name (optional)</label>
+          <div class="customer-name-row">
+            <input id="customerName" type="text" placeholder="Enter name..." autocomplete="off" />
+            <button id="clearCustomerName" type="button">Clear</button>
+          </div>
+        </div>
+      `;
+    }
+
     sections.forEach((section) => {
       if (section.header) {
         html += `<div class="menu-title">${escapeHtml(section.header)}</div>`;
@@ -192,6 +219,23 @@ const DashMsgUI = (() => {
     }
 
     app.innerHTML = html;
+
+    const customerNameInput = document.getElementById("customerName");
+    const clearCustomerNameBtn = document.getElementById("clearCustomerName");
+
+    if (customerNameInput) {
+      customerNameInput.value = localStorage.getItem(CUSTOMER_NAME_KEY) || "";
+
+      customerNameInput.addEventListener("input", () => {
+        setCustomerName(customerNameInput.value);
+      });
+    }
+
+    if (clearCustomerNameBtn) {
+      clearCustomerNameBtn.addEventListener("click", () => {
+        clearCustomerName();
+      });
+    }
   }
 
   /* -----------------------

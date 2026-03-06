@@ -155,6 +155,36 @@ h1{
   color: var(--text-2);
 }
 
+.customer-name-wrap {
+  margin-bottom: 16px;
+}
+
+.customer-name-wrap label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.customer-name-row {
+  display: flex;
+  gap: 8px;
+}
+
+#customerName {
+  flex: 1;
+  min-height: 44px;
+  padding: 12px;
+  font-size: 16px;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+}
+
+#clearCustomerName {
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 10px;
+}
+
 /* =========================
    Lists + Rows
 ========================= */
@@ -538,5 +568,4 @@ textarea.beta-schema-input{ min-height:74px; resize:vertical; }
   #beta-panel{ right:12px; width:calc(100vw - 24px); }
   #beta-fab, #beta-minibar{ right:12px; }
 }
-
 
