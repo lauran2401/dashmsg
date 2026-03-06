@@ -1,401 +1,641 @@
-/* DashMsg Styles — iOS-native feel (clean, consistent, layman-friendly) /
+Can you send back what is needed in styles only 
 
-/ =========================
+/* DashMsg Styles — iOS-native feel (clean, consistent, layman-friendly)
+   Drop-in replacement for public/styles.css
+*/
+
+/* =========================
    Design tokens
 ========================= */
+
+
 
 :root{
   --app-max: 420px;
 
-  --bg:#f2f2f7;
-  --surface:rgba(255,255,255,.86);
-  --border:rgba(60,60,67,.18);
-  --border-2:rgba(60,60,67,.12);
+  /* Light */
+  --bg: #f2f2f7;
+  --surface: rgba(255,255,255,.86);
+  --surface-2: rgba(255,255,255,.72);
+  --border: rgba(60,60,67,.18);
+  --border-2: rgba(60,60,67,.12);
 
-  --text:#111113;
-  --text-2:rgba(60,60,67,.72);
-  --text-3:rgba(60,60,67,.52);
+  --text: #111113;
+  --text-2: rgba(60,60,67,.72);
+  --text-3: rgba(60,60,67,.52);
 
-  --blue:#007aff;
-  --red:#ff3b30;
-  --green:#34c759;
+  --blue: #007aff;
+  --red: #ff3b30;
+  --green: #34c759;
 
-  --shadow:0 8px 26px rgba(0,0,0,.10);
-  --shadow-2:0 2px 10px rgba(0,0,0,.08);
+  --shadow: 0 8px 26px rgba(0,0,0,.10);
+  --shadow-2: 0 2px 10px rgba(0,0,0,.08);
 
-  --radius:18px;
-  --radius-sm:12px;
+  --radius: 18px;
+  --radius-sm: 12px;
 
-  --tap:rgba(120,120,128,.16);
-  --blur:22px;
+  --tap: rgba(120,120,128,.16);
+  --tap-strong: rgba(120,120,128,.24);
 
-  --safe-top:env(safe-area-inset-top);
-  --safe-bot:env(safe-area-inset-bottom);
+  --blur: 22px;
+
+  --safe-top: env(safe-area-inset-top);
+  --safe-bot: env(safe-area-inset-bottom);
 }
 
-/ Dark mode /
-
+/* Dark */
 @media (prefers-color-scheme: dark){
   :root{
-    --bg:#000;
-    --surface:rgba(28,28,30,.78);
-    --border:rgba(84,84,88,.50);
-    --border-2:rgba(84,84,88,.34);
+    --bg: #000;
+    --surface: rgba(28,28,30,.78);
+    --surface-2: rgba(28,28,30,.62);
+    --border: rgba(84,84,88,.50);
+    --border-2: rgba(84,84,88,.34);
 
-    --text:#fff;
-    --text-2:rgba(235,235,245,.68);
-    --text-3:rgba(235,235,245,.48);
+    --text: #fff;
+    --text-2: rgba(235,235,245,.68);
+    --text-3: rgba(235,235,245,.48);
 
-    --blue:#0a84ff;
-    --red:#ff453a;
-    --green:#32d74b;
+    --blue: #0a84ff;
+    --red: #ff453a;
+    --green: #32d74b;
 
-    --shadow:0 16px 40px rgba(0,0,0,.55);
-    --shadow-2:0 6px 18px rgba(0,0,0,.40);
+    --shadow: 0 16px 40px rgba(0,0,0,.55);
+    --shadow-2: 0 6px 18px rgba(0,0,0,.40);
+
+    --tap: rgba(255,255,255,.08);
+    --tap-strong: rgba(255,255,255,.12);
   }
 }
+  
 
-/ =========================
-   Base
+.fb-root {
+  position: fixed;
+  right: 16px;
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  z-index: 9999;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+.fb-fab {
+  width: 56px;
+  height: 56px;
+  border: 0;
+  border-radius: 9999px;
+  background: #1473e6;
+  color: #fff;
+  box-shadow: 0 10px 24px rgba(0,0,0,.18);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+
+.fb-fab svg {
+  width: 22px;
+  height: 22px;
+  fill: currentColor;
+}
+
+.fb-panel {
+  width: min(340px, calc(100vw - 24px));
+  margin-bottom: 12px;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 18px 40px rgba(0,0,0,.18);
+  border: 1px solid rgba(0,0,0,.08);
+  padding: 12px;
+}
+
+.fb-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.fb-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.fb-close {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  background: transparent;
+  color: #6b7280;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.fb-types {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.fb-type {
+  border: 1px solid #dbe3ef;
+  background: #fff;
+  color: #1f2937;
+  border-radius: 10px;
+  padding: 10px 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.fb-type.active {
+  background: #1473e6;
+  color: #fff;
+  border-color: #1473e6;
+}
+
+.fb-message {
+  width: 100%;
+  min-height: 110px;
+  border-radius: 12px;
+  border: 1px solid #d1d5db;
+  padding: 12px;
+  font-size: 16px;
+  outline: none;
+  resize: vertical;
+  margin-bottom: 10px;
+}
+
+.fb-message:focus {
+  border-color: #1473e6;
+  box-shadow: 0 0 0 3px rgba(20,115,230,.12);
+}
+
+.fb-attach-row {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.fb-attach-btn {
+  display: inline-block;
+  border: 1px solid #dbe3ef;
+  background: #f8fbff;
+  color: #0f4ea8;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.fb-file-input {
+  display: none;
+}
+
+.fb-screenshot-meta {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.fb-footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.fb-submit {
+  border: 0;
+  border-radius: 12px;
+  background: #1473e6;
+  color: #fff;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.fb-submit:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+/* =========================
+   Compose Mode (keyboard safe)
 ========================= */
 
-{box-sizing:border-box;-webkit-font-smoothing:antialiased;}
+.fb-root.fb-compose-mode {
+  right: 0;
+  left: 0;
+  display: flex;
+  justify-content: center;
+}
 
-html,body{height:100%;}
+.fb-root.fb-compose-mode .fb-panel {
+  position: fixed;
 
+  /* move panel above keyboard zone */
+  bottom: auto;
+  top: max(12px, calc(env(safe-area-inset-top) + 12px));
+
+  /* stable centered card */
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+
+  width: min(92vw, 420px);
+
+  /* prevent huge height */
+  height: min(50svh, 380px);
+
+  display: flex;
+  flex-direction: column;
+}
+
+/* make textarea area flexible */
+
+.fb-root.fb-compose-mode .fb-message {
+  flex: 1;
+  min-height: 90px;
+  max-height: none;
+}
+
+/* keep footer visible */
+
+.fb-root.fb-compose-mode .fb-footer {
+  margin-top: 8px;
+}
+
+/* tighten layout while typing */
+
+.fb-root.fb-compose-mode .fb-types {
+  margin-bottom: 6px;
+}
+
+.fb-root.fb-compose-mode .fb-message {
+  margin-bottom: 6px;
+}
+/* =========================
+   Base
+========================= */
+*{ box-sizing:border-box; -webkit-font-smoothing: antialiased; }
+html,body{ height:100%; }
 body{
   margin:0;
-  background:var(--bg);
-  color:var(--text);
-  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  -webkit-user-select:none;
   overflow-x:hidden;
 }
 
 #app{
-  max-width:var(--app-max);
-  margin:0 auto;
-  padding:calc(12px + var(--safe-top)) 16px calc(18px + var(--safe-bot));
+  max-width: var(--app-max);
+  margin: 0 auto;
+  padding: calc(12px + var(--safe-top)) 16px calc(18px + var(--safe-bot));
 }
 
-/ =========================
-   Navigation
-========================= /
+/* =========================
+   Header / Nav Bar
+   (Home upper-left, title centered)
+========================= */
+.nav-bar{
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  backdrop-filter: blur(var(--blur));
+  -webkit-backdrop-filter: blur(var(--blur));
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  margin: -12px -16px 10px;
+  padding: 12px 16px 10px;
+  border-bottom: 1px solid var(--border-2);
+}
 
 .nav-bar{
-  position:sticky;
-  top:0;
-  z-index:30;
-  backdrop-filter:blur(var(--blur));
-  background:color-mix(in srgb,var(--bg) 82%,transparent);
-  margin:-12px -16px 10px;
-  padding:12px 16px 10px;
-  border-bottom:1px solid var(--border-2);
-
   display:grid;
-  grid-template-columns:90px 1fr 90px;
+  grid-template-columns: 90px 1fr 90px;
   align-items:center;
+  gap:8px;
 }
 
 .nav-title{
   text-align:center;
-  font-size:20px;
-  font-weight:800;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.2px;
 }
+
+.nav-spacer{ height: 1px; }
 
 .nav-btn{
+  appearance:none;
   border:0;
   background:transparent;
-  color:var(--blue);
-  font-size:17px;
-  font-weight:700;
-  padding:8px 10px;
-  border-radius:12px;
+  color: var(--blue);
+  font-size: 17px;
+  font-weight: 700;
+  padding: 8px 10px;
+  border-radius: 12px;
+  text-align:left;
+}
+.nav-btn:active{ background: var(--tap); }
+
+/* =========================
+   Headings
+========================= */
+h1{
+  margin: 8px 0 14px;
+  font-size: 32px;
+  font-weight: 900;
+  letter-spacing: -0.8px;
 }
 
-.nav-btn:active{background:var(--tap);}
+.menu-title{
+  margin: 14px 0 8px 6px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
 
-/ =========================
-   Lists
-========================= /
+.customer-name-wrap {
+  margin-bottom: 16px;
+}
 
+.customer-name-wrap label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.customer-name-row {
+  display: flex;
+  gap: 8px;
+}
+
+#customerName {
+  flex: 1;
+  min-height: 44px;
+  padding: 12px;
+  font-size: 16px;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+}
+
+#clearCustomerName {
+  min-height: 44px;
+  padding: 0 14px;
+  border-radius: 10px;
+}
+
+/* =========================
+   Lists + Rows
+========================= */
 .list{
-  background:var(--surface);
-  border:1px solid var(--border);
-  border-radius:var(--radius);
+  position:relative;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
   overflow:hidden;
-  box-shadow:var(--shadow-2);
-  margin:0 0 16px;
+  box-shadow: var(--shadow-2);
+  backdrop-filter: blur(var(--blur));
+  -webkit-backdrop-filter: blur(var(--blur));
+  margin: 0 0 16px;
+}
+
+/* subtle “glass” highlight */
+.list::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background: linear-gradient(
+    180deg,
+    rgba(255,255,255,.18) 0%,
+    rgba(255,255,255,0) 35%,
+    rgba(0,0,0,.02) 100%
+  );
+  opacity:.55;
 }
 
 .row{
+  width:100%;
   display:flex;
   align-items:center;
   justify-content:space-between;
-  padding:16px 18px;
-  border-bottom:.5px solid var(--border);
-  color:var(--blue);
-  font-size:18px;
-  font-weight:700;
+  gap:12px;
+
+  padding: 16px 18px;
+  border:0;
+  border-bottom: 0.5px solid var(--border);
+  background: transparent;
+
+  color: var(--blue);
+  font-size: 18px;
+  font-weight: 700;
+  text-align:left;
+
+  position:relative;
+  z-index:1;
 }
 
-.row:last-child{border-bottom:0;}
-.row:active{background:var(--tap);}
+.row:last-child{ border-bottom:0; }
+
+.row:active{
+  background: var(--tap);
+}
 
 .row .chev{
-  color:var(--text-3);
-  font-weight:800;
+  color: var(--text-3);
+  font-size: 18px;
+  font-weight: 800;
 }
 
-/ =========================
+/* Static info row */
+.row.static-row{
+  color: var(--text-2);
+  font-weight: 600;
+  cursor: default;
+}
+.row.static-row:active{ background: transparent; }
+
+/* Variants */
+.row.destructive{
+  color: var(--red);
+}
+
+.row.back{
+  color: var(--blue);
+  font-weight: 800;
+}
+.row.back::before{
+  content:"‹";
+  font-weight: 900;
+  margin-right: 10px;
+  color: var(--blue);
+}
+
+/* Bottom back area (Back only at bottom) */
+.bottom-back{
+  margin-top: 10px;
+}
+
+/* Optional bottom nav container if you still use it elsewhere */
+.bottom-nav{
+  margin-top: 10px;
+}
+
+/* =========================
    Inputs
-========================= /
-
-input[type="text"],textarea{
+========================= */
+input[type="text"],
+textarea{
   width:100%;
-  font:inherit;
-  border:1px solid var(--border);
-  border-radius:var(--radius-sm);
-  padding:12px;
-  background:var(--surface);
+  font: inherit;
+  color: var(--text);
+  background: color-mix(in srgb, var(--surface) 70%, transparent);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 12px;
+  outline: none;
 }
 
-textarea{min-height:120px;resize:vertical;}
+input[type="text"]:focus,
+textarea:focus{
+  border-color: color-mix(in srgb, var(--blue) 60%, var(--border));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--blue) 18%, transparent);
+}
 
-/ =========================
-   Toast
-========================= /
+textarea{
+  min-height: 130px;
+  resize: vertical;
+}
 
+/* =========================
+   Feedback/Beta panels
+========================= */
+.feedback-panel{ padding: 14px; }
+.feedback-wrap{
+  display:flex;
+  flex-direction:column;
+  gap: 10px;
+}
+.feedback-input{ min-height: 140px; }
+.beta-meta{
+  color: var(--text-2);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+/* =========================
+   Toast (top, clean, obvious)
+========================= */
 .toast{
-  position:fixed;
-  left:50%;
-  transform:translateX(-50%);
-  top:calc(var(--safe-top) + 10px);
-  width:min(var(--app-max),calc(100vw - 28px));
-  border-radius:14px;
-  padding:10px 12px;
-  background:rgba(28,28,30,.92);
-  color:#fff;
-  box-shadow:var(--shadow);
-  opacity:0;
-  transition:opacity .14s ease;
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  top: calc(var(--safe-top) + 10px);
+  z-index: 9999;
+
+  width: min(var(--app-max), calc(100vw - 28px));
+  border-radius: 14px;
+  padding: 10px 12px;
+
+  background: rgba(28,28,30,.92);
+  color: #fff;
+  box-shadow: var(--shadow);
+
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .14s ease, transform .14s ease;
 }
 
-.toast.show{opacity:1;}
-
-.toast.ok{background:rgba(36,138,61,.94);}
-.toast.error{background:rgba(176,42,42,.94);}
-
-/ =====================================================
-   FEEDBACK WIDGET
-===================================================== /
-
-.fb-root{
-  position:fixed;
-  right:16px;
-  bottom:calc(16px + env(safe-area-inset-bottom));
-  z-index:9999;
-  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+.toast.show{
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
 }
 
-/ Floating button /
+.toast.ok{ background: rgba(36,138,61,.94); }
+.toast.error{ background: rgba(176,42,42,.94); }
 
-.fb-fab{
-  width:56px;
-  height:56px;
-  border:0;
-  border-radius:9999px;
-  background:#1473e6;
-  color:#fff;
-  box-shadow:0 10px 24px rgba(0,0,0,.18);
-  display:grid;
-  place-items:center;
-  cursor:pointer;
+.toast-title{
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  opacity: .95;
 }
 
-.fb-fab svg{
-  width:22px;
-  height:22px;
-  fill:currentColor;
+.toast-msg{
+  margin-top: 4px;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-/ Panel /
-
-.fb-panel{
-  width:min(340px,calc(100vw - 24px));
-  margin-bottom:12px;
-  border-radius:18px;
-  background:#fff;
-  box-shadow:0 18px 40px rgba(0,0,0,.18);
-  border:1px solid rgba(0,0,0,.08);
-  padding:12px;
+/* =========================
+   Small tweaks for iPhone feel
+========================= */
+@supports (-webkit-touch-callout: none){
+  .row{ padding-top: 17px; padding-bottom: 17px; }
+}
+.section{
+margin-bottom:22px;
 }
 
-/ Header /
-
-.fb-header{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  margin-bottom:10px;
+.section-title{
+font-size:13px;
+font-weight:600;
+color:#777;
+margin:8px 4px;
+text-transform:uppercase;
+letter-spacing:.06em;
 }
 
-.fb-title{
-  font-size:16px;
-  font-weight:700;
+.template-row{
+display:flex;
+align-items:center;
+justify-content:space-between;
+padding:16px 14px;
 }
 
-.fb-close{
-  width:32px;
-  height:32px;
-  border:0;
-  background:transparent;
-  color:#6b7280;
-  font-size:20px;
-  cursor:pointer;
+.tpl-main{
+display:flex;
+flex-direction:column;
 }
 
-/ Type buttons /
-
-.fb-types{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:6px;
-  margin-bottom:10px;
+.tpl-title{
+font-size:16px;
+font-weight:600;
 }
 
-.fb-type{
-  border:1px solid #dbe3ef;
-  background:#fff;
-  color:#1f2937;
-  border-radius:10px;
-  padding:10px 8px;
-  font-size:13px;
-  font-weight:600;
+.tpl-sub{
+font-size:12px;
+color:#888;
+margin-top:2px;
 }
 
-.fb-type.active{
-  background:#1473e6;
-  color:#fff;
-  border-color:#1473e6;
+.scroll-area{
+overflow-y:auto;
+max-height:calc(100vh - 160px);
+padding-right:6px;
 }
 
-/ Message /
-
-.fb-message{
-  width:100%;
-  min-height:90px;
-  border-radius:12px;
-  border:1px solid #d1d5db;
-  padding:12px;
-  font-size:16px;
-  resize:vertical;
-  margin-bottom:10px;
+.scroll-area::-webkit-scrollbar{
+width:6px;
 }
 
-.fb-message:focus{
-  border-color:#1473e6;
-  box-shadow:0 0 0 3px rgba(20,115,230,.12);
+.scroll-area::-webkit-scrollbar-thumb{
+background:#ccc;
+border-radius:6px;
 }
 
-/ Attach /
-
-.fb-attach-row{
-  display:flex;
-  flex-direction:column;
-  gap:6px;
-  margin-bottom:10px;
+.scroll-area::-webkit-scrollbar-track{
+background:transparent;
 }
 
-.fb-attach-btn{
-  border:1px solid #dbe3ef;
-  background:#f8fbff;
-  color:#0f4ea8;
-  border-radius:10px;
-  padding:10px 12px;
-  font-size:14px;
-}
 
-.fb-file-input{display:none;}
 
-.fb-screenshot-meta{
-  font-size:12px;
-  color:#6b7280;
-}
 
-/ Footer /
-
-.fb-footer{
-  display:flex;
-  justify-content:flex-end;
-}
-
-.fb-submit{
-  border:0;
-  border-radius:12px;
-  background:#1473e6;
-  color:#fff;
-  padding:10px 16px;
-  font-size:14px;
-  font-weight:700;
-}
-
-.fb-submit:disabled{
-  opacity:.5;
-}
-
-/ =====================================================
-   COMPOSE MODE (keyboard safe)
-===================================================== /
-
-.fb-root.fb-compose-mode{
-  left:0;
-  right:0;
-  display:flex;
-  justify-content:center;
-}
-
-/ hide floating button /
-
-.fb-root.fb-compose-mode .fb-fab{
-  opacity:0;
-  pointer-events:none;
-}
-
-/ move panel above keyboard /
-
-.fb-root.fb-compose-mode .fb-panel{
-  position:fixed;
-  bottom:auto;
-  top:max(12px,calc(env(safe-area-inset-top) + 12px));
-  left:50%;
-  transform:translateX(-50%);
-  width:min(92vw,420px);
-  height:min(50svh,380px);
-
-  display:flex;
-  flex-direction:column;
-
-  border-radius:20px;
-  box-shadow:0 20px 50px rgba(0,0,0,.22);
-}
-
-/ flexible textarea */
-
-.fb-root.fb-compose-mode .fb-message{
-  flex:1;
-  min-height:80px;
-  margin-bottom:6px;
-}
-
-.fb-root.fb-compose-mode .fb-types{
-  margin-bottom:6px;
-}
-
-.fb-root.fb-compose-mode .fb-type{
-  padding:8px 6px;
-  font-size:12px;
-}
-
-.fb-root.fb-compose-mode .fb-footer{
-  margin-top:8px;
-}
