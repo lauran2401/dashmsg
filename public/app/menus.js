@@ -5,7 +5,7 @@ const DashMsgMenus = {
       {
         items: [
           { label: "Pickup", more: true, action: { type: "nav", screen: "pickup" } },
-          { label: "En Route", more: true, action: { type: "nav", screen: "enroute" } },
+          { label: "On the Way", more: true, action: { type: "nav", screen: "enroute" } },
           { label: "Shopping", more: true, action: { type: "nav", screen: "shopping" } },
           { label: "Delivered", more: true, action: { type: "nav", screen: "delivered" } }
         ]
@@ -65,7 +65,7 @@ const DashMsgMenus = {
   },
 
   enroute: {
-    title: "En Route",
+    title: "On the Way",
     sections: [
       {
         items: [
@@ -130,18 +130,6 @@ const DashMsgMenus = {
         items: [
           { label: "ON", action: { type: "function", name: "setEmojiOn" } },
           { label: "OFF", action: { type: "function", name: "setEmojiOff" } }
-        ]
-      }
-    ]
-  },
-
-  pref_name: {
-    title: "Name Prompt",
-    sections: [
-      {
-        items: [
-          { label: "ON", action: { type: "function", name: "setNamePromptOn" } },
-          { label: "OFF", action: { type: "function", name: "setNamePromptOff" } }
         ]
       }
     ]
