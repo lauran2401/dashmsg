@@ -20,15 +20,11 @@ import { mountFeedbackWidget } from "./feedback-widget.js";
 
 mountFeedbackWidget({
   onSubmit: async (payload) => {
-    // replace with your real endpoint later
-    console.log("Submitting feedback:", payload);
-
-    // fake delay
-    await new Promise(r => setTimeout(r, 400));
-
+    await window.DashMsg?.sendFeedback?.(payload);
     return { ok: true };
   }
 });
+
 
 
 
