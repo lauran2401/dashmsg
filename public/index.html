@@ -13,31 +13,39 @@
 <body>
   <div class="container" id="app"></div>
 
-  <div id="beta-fab" aria-label="Feedback">⚑</div>
+  <button id="beta-fab" aria-label="Feedback" aria-expanded="false">⚑</button>
 
-  <div id="beta-panel" role="dialog" aria-modal="true" aria-label="DashMsg Feedback" style="display:none;">
+  <div id="beta-panel" role="dialog" aria-modal="true" aria-label="DashMsg Feedback" hidden>
     <div class="beta-header">
       <div class="beta-title">Feedback</div>
-      <button id="beta-close" class="beta-close" aria-label="Close">✕</button>
+      <button id="beta-close" class="beta-close" aria-label="Minimize feedback panel">✕</button>
     </div>
 
-    <input id="beta-search" placeholder="Search or type suggestion…" autocomplete="off" />
+    <label class="sr-only" for="beta-search">Search suggestions</label>
+    <input id="beta-search" placeholder="Search suggestions…" autocomplete="off" aria-label="Search suggestions" />
 
-    <div id="beta-tabs">
-      <button class="beta-tab is-active" data-tab="recent">Recent</button>
-      <button class="beta-tab" data-tab="all">All</button>
-      <button class="beta-tab" data-tab="categories">Categories</button>
+    <div id="beta-selected" class="beta-selected" aria-live="polite"></div>
+
+    <label class="sr-only" for="beta-notes">Feedback details</label>
+    <textarea id="beta-notes" placeholder="Optional details" aria-label="Feedback details"></textarea>
+    <div class="beta-notes-meta">
+      <span id="beta-charcount">0/500</span>
+      <label class="beta-debug-toggle"><input id="beta-debug" type="checkbox" /> Include debug data</label>
     </div>
 
-    <div id="beta-results" tabindex="0"></div>
-
-    <textarea id="beta-notes" placeholder="Optional details"></textarea>
+    <div id="beta-results-wrap">
+      <div id="beta-results" tabindex="0" aria-label="Suggestion list"></div>
+      <button id="beta-more" class="beta-more" type="button" hidden>Show more</button>
+      <div id="beta-custom" class="beta-custom" hidden></div>
+    </div>
 
     <div class="beta-actions">
-      <button id="beta-send" class="beta-send">Send</button>
+      <button id="beta-cancel" class="beta-cancel" type="button">Cancel</button>
+      <button id="beta-send" class="beta-send" type="button" disabled>Send</button>
     </div>
   </div>
 
+  <script src="https://cdn.jsdelivr.net/npm/minisearch@7.1.2/dist/umd/index.min.js"></script>
   <script type="module" src="./app/ui.js"></script>
   <script type="module" src="./app/editors.js"></script>
   <script type="module" src="./app/menus.js"></script>

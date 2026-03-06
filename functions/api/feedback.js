@@ -13,7 +13,7 @@ export async function onRequestPost({ request, env }) {
   if (!origin.includes("pages.dev")) return new Response("Forbidden", { status: 403 });
 
   const tester_id = body.tester_id || "unknown";
-  const message = body.message || body.notes || "";
+  const message = body.message || body.notes || JSON.stringify(body || {});
   const template = body.template || null;
 
   await env.DB.prepare(
