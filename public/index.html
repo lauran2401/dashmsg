@@ -13,39 +13,6 @@
 <body>
   <div class="container" id="app"></div>
 
-  <button id="beta-fab" aria-label="Feedback" aria-expanded="false">⚑</button>
-
-  <div id="beta-panel" role="dialog" aria-modal="true" aria-label="DashMsg Feedback" hidden>
-    <div class="beta-header">
-      <div class="beta-title">Feedback</div>
-      <button id="beta-close" class="beta-close" aria-label="Minimize feedback panel">✕</button>
-    </div>
-
-    <label class="sr-only" for="beta-search">Search suggestions</label>
-    <input id="beta-search" placeholder="Search suggestions…" autocomplete="off" aria-label="Search suggestions" />
-
-    <div id="beta-selected" class="beta-selected" aria-live="polite"></div>
-
-    <label class="sr-only" for="beta-notes">Feedback details</label>
-    <textarea id="beta-notes" placeholder="Optional details" aria-label="Feedback details"></textarea>
-    <div class="beta-notes-meta">
-      <span id="beta-charcount">0/500</span>
-      <label class="beta-debug-toggle"><input id="beta-debug" type="checkbox" /> Include debug data</label>
-    </div>
-
-    <div id="beta-results-wrap">
-      <div id="beta-results" tabindex="0" aria-label="Suggestion list"></div>
-      <button id="beta-more" class="beta-more" type="button" hidden>Show more</button>
-      <div id="beta-custom" class="beta-custom" hidden></div>
-    </div>
-
-    <div class="beta-actions">
-      <button id="beta-cancel" class="beta-cancel" type="button">Cancel</button>
-      <button id="beta-send" class="beta-send" type="button" disabled>Send</button>
-    </div>
-  </div>
-
-  <script src="https://cdn.jsdelivr.net/npm/minisearch@7.1.2/dist/umd/index.min.js"></script>
   <script type="module" src="./app/ui.js"></script>
   <script type="module" src="./app/editors.js"></script>
   <script type="module" src="./app/menus.js"></script>
@@ -53,24 +20,20 @@
 
   <script type="module">
     (function () {
-      function showBootError(e) {
+      function showErr(e) {
         const msg = (e && (e.stack || e.message)) ? (e.stack || e.message) : String(e);
-        const pre = document.createElement("pre");
-        pre.style.whiteSpace = "pre-wrap";
-        pre.style.padding = "12px";
-        pre.style.font = "12px -apple-system";
-        pre.style.background = "#111";
-        pre.style.color = "#fff";
-        pre.textContent = msg;
-        document.body.appendChild(pre);
+        document.body.innerHTML =
+          '<pre style="white-space:pre-wrap;padding:12px;font:12px -apple-system;background:#111;color:#fff">' +
+          msg.replaceAll('<','&lt;') +
+          '</pre>';
       }
+      window.addEventListener('error', ev => showErr(ev.error || ev.message));
+      window.addEventListener('unhandledrejection', ev => showErr(ev.reason));
 
       try {
         if (window.DashMsg && typeof window.DashMsg.init === "function") window.DashMsg.init();
         else throw new Error("DashMsg did not attach to window (core.js loaded but window.DashMsg is missing).");
-      } catch (e) {
-        showBootError(e);
-      }
+      } catch (e) { showErr(e); }
     })();
   </script>
 </body>
