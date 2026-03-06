@@ -115,7 +115,26 @@ export function mountFeedbackWidget({
     persistDraft();
     updateSendState();
   });
+  // --- compose mode handling (mobile keyboard safe layout)
 
+function enterComposeMode() {
+  root.classList.add("fb-compose-mode");
+}
+
+function exitComposeMode() {
+  root.classList.remove("fb-compose-mode");
+}
+
+message.addEventListener("focus", () => {
+  enterComposeMode();
+});
+
+message.addEventListener("blur", () => {
+  // small delay prevents flicker if user taps send
+  setTimeout(() => {
+    if (!message.matches(":focus")) exitComposeMode();
+  }, 100);
+});
   const attachRow = el("div", "fb-attach-row");
 
   const attachLabel = el("label", "fb-attach-btn");
