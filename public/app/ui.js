@@ -141,18 +141,20 @@ const DashMsgUI = (() => {
 
         if (hasInput) {
           html += `
-          <button class="row${cls}" data-action='${safeAction(item.action)}'>
-            <span>${escapeHtml(item.label)}</span>
+          <div class="row has-input">
+            <button class="row-input-action${item.class ? ` ${escapeHtml(item.class)}` : ""}" data-action='${safeAction(item.action)}'>
+              <span>${escapeHtml(item.label)}</span>
+            </button>
             <input
               class="row-inline-input"
               id="${escapeHtml(item.input.id)}"
               type="${escapeHtml(item.input.type || "text")}" 
               inputmode="numeric"
-              min="${escapeHtml(item.input.min ?? "")}"
-              max="${escapeHtml(item.input.max ?? "")}"
+              min="${escapeHtml(item.input.min ?? "")}" 
+              max="${escapeHtml(item.input.max ?? "")}" 
               placeholder="${escapeHtml(item.input.placeholder || "")}" 
             />
-          </button>
+          </div>
         `;
           return;
         }
@@ -259,7 +261,7 @@ const DashMsgUI = (() => {
     app.addEventListener("click", (e) => {
       if (e.target.closest(".row-inline-input")) return;
 
-      const btn = e.target.closest("button.row, button.nav-btn");
+      const btn = e.target.closest("button.row, button.nav-btn, .row-input-action");
       if (!btn) return;
 
       let action = null;

@@ -480,6 +480,18 @@ h1{
   gap: 12px;
 }
 
+.row-input-action {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  padding: 0;
+  cursor: pointer;
+}
+
 .row-inline-input {
   width: 64px;
   min-width: 64px;
