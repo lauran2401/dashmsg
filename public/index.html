@@ -35,23 +35,24 @@
       </div>
     </div>
 
-    <input id="beta-search" placeholder="Search or type suggestion…" autocomplete="off" />
+    <input id="beta-search" placeholder="Search feedback..." autocomplete="off" />
 
-    <div id="beta-tabs">
-      <button class="beta-tab is-active" data-tab="recent">Recent</button>
-      <button class="beta-tab" data-tab="all">All</button>
-      <button class="beta-tab" data-tab="categories">Categories</button>
-    </div>
-
-    <div id="beta-results" tabindex="0"></div>
-
-    <div id="beta-selected" class="beta-selected-row" hidden>
-      <span class="beta-selected-label">Selected</span>
-      <div class="beta-selected-chip" id="beta-selected-chip"></div>
+    <div id="beta-selected" class="beta-selected-chip-row" hidden>
+      <span class="beta-selected-prefix">Selected:</span>
+      <span id="beta-selected-chip" class="beta-selected-chip"></span>
       <button id="beta-selected-clear" type="button" class="beta-selected-clear" aria-label="Clear selected suggestion" title="Clear selection">✕</button>
     </div>
 
-    <textarea id="beta-notes" placeholder="Optional details"></textarea>
+    <div id="beta-inline-results" tabindex="0"></div>
+
+    <div id="beta-browse" class="beta-browse">
+      <button id="beta-browse-cats" type="button" class="beta-disclosure" aria-expanded="false">Browse by category <span aria-hidden="true">▸</span></button>
+      <div id="beta-cats-list" class="beta-disclosure-body" hidden></div>
+      <button id="beta-browse-az" type="button" class="beta-disclosure" aria-expanded="false">Browse A–Z <span aria-hidden="true">▸</span></button>
+      <div id="beta-az-list" class="beta-disclosure-body" hidden></div>
+    </div>
+
+    <div id="beta-dynamic-fields" class="beta-dynamic-fields" hidden></div>
 
     <div class="beta-actions">
       <button id="beta-send" class="beta-send">Send</button>

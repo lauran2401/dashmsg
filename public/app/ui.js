@@ -1,7 +1,6 @@
 // public/app/ui.js — fixed (Home upper-left, Back only at bottom, no broken braces)
 
 const LS_RECENT = "dashmsg_beta_recent";
-const LS_PINS = "dashmsg_beta_pins";
 const LS_QUEUE = "dashmsg_beta_queue";
 const LS_DRAFT = "dashmsg_feedback_draft";
 
@@ -14,19 +13,19 @@ function lsSet(key, val) {
 }
 
 const FEEDBACK_CATALOG = [
-  { id:"tpl_rename", cat:"Templates", title:"Rename template", desc:"Improve labels people see in the editor", tags:["name","label","rename","title"] },
-  { id:"tpl_reorder", cat:"Templates", title:"Change template order", desc:"Better default ordering and grouping", tags:["order","sort","group"] },
-  { id:"tpl_wording", cat:"Templates", title:"Improve template wording", desc:"Make message clearer, shorter, more polite", tags:["copy","tone","wording","text"] },
-  { id:"tpl_add", cat:"Templates", title:"Add new template", desc:"Missing scenario, add a new preset", tags:["new","missing","scenario"] },
-  { id:"tpl_vars", cat:"Templates", title:"Add placeholder/variable", desc:"Name/ETA/store/hot bag placeholders", tags:["variable","placeholder","eta","name"] },
-  { id:"ui_spacing", cat:"UI", title:"Fix spacing/layout", desc:"Padding, alignment, dense/airy", tags:["spacing","layout","padding"] },
-  { id:"ui_nav", cat:"UI", title:"Navigation confusion", desc:"Hard to find a screen or go back", tags:["navigation","back","home"] },
-  { id:"ui_scroll", cat:"UI", title:"Scrolling issue", desc:"Scroll area feels wrong or stuck", tags:["scroll","overflow"] },
-  { id:"auto_context", cat:"Automation", title:"Auto-suggest best template", desc:"Choose message based on context", tags:["auto","suggest","smart"] },
-  { id:"auto_eta", cat:"Automation", title:"Better ETA handling", desc:"ETA prompts, formatting, toggles", tags:["eta","time"] },
-  { id:"bug_copy", cat:"Bug", title:"Copy/paste failure", desc:"Clipboard not working or wrong text", tags:["copy","clipboard","paste"] },
-  { id:"bug_save", cat:"Bug", title:"Save/reset failure", desc:"Edits not persisting or reset wrong", tags:["save","reset","storage"] },
-  { id:"bug_crash", cat:"Bug", title:"Crash/error", desc:"Screen breaks or JS error", tags:["crash","error"] },
+  { id:"tpl_rename", cat:"Templates", title:"Rename template", desc:"Improve labels people see in the editor", tags:["name","label","rename","title"], aliases:["change template name"], priority:3, prompt:"What should the new template name be?", promptSchema:{ fields:[{ key:"current_name", label:"Current template name", type:"text", required:true }, { key:"new_name", label:"New template name", type:"text", required:true }] } },
+  { id:"tpl_reorder", cat:"Templates", title:"Change template order", desc:"Better default ordering and grouping", tags:["order","sort","group"], aliases:["reorder templates"], priority:3, prompt:"What order would you prefer?", promptSchema:{ fields:[{ key:"menu_name", label:"Which menu or list?", type:"text", required:true }, { key:"item_name", label:"Which item should move?", type:"text", required:true }, { key:"target_position", label:"Where should it move?", type:"text", required:true }] } },
+  { id:"tpl_wording", cat:"Templates", title:"Improve template wording", desc:"Make message clearer, shorter, more polite", tags:["copy","tone","wording","text"], aliases:["rewrite template"], priority:2, prompt:"What wording change do you want?", promptSchema:{ fields:[{ key:"template_name", label:"Template name", type:"text", required:false }, { key:"current_wording", label:"Current wording", type:"textarea", required:true }, { key:"preferred_wording", label:"Preferred wording", type:"textarea", required:true }] } },
+  { id:"tpl_add", cat:"Templates", title:"Add new template", desc:"Missing scenario, add a new preset", tags:["new","missing","scenario"], aliases:["new template"], priority:2, prompt:"What scenario should this template cover?", promptSchema:{ fields:[{ key:"feature_idea", label:"Template idea", type:"text", required:true }, { key:"why_helpful", label:"Why it would help", type:"textarea", required:true }] } },
+  { id:"tpl_vars", cat:"Templates", title:"Add placeholder/variable", desc:"Name/ETA/store/hot bag placeholders", tags:["variable","placeholder","eta","name"], aliases:["dynamic field"], priority:2, prompt:"Which placeholder do you need?", promptSchema:{ fields:[{ key:"template_name", label:"Template name", type:"text", required:false }, { key:"placeholder_name", label:"Placeholder needed", type:"text", required:true }, { key:"usage_note", label:"How should it work?", type:"textarea", required:false }] } },
+  { id:"ui_spacing", cat:"UI", title:"Fix spacing/layout", desc:"Padding, alignment, dense/airy", tags:["spacing","layout","padding"], aliases:["ui feels cramped"], priority:2, prompt:"Where does the layout feel off?", promptSchema:{ fields:[{ key:"screen", label:"Which screen?", type:"text", required:true }, { key:"issue", label:"What feels wrong?", type:"textarea", required:true }] } },
+  { id:"ui_nav", cat:"UI", title:"Navigation confusion", desc:"Hard to find a screen or go back", tags:["navigation","back","home"], aliases:["too many taps"], priority:2, prompt:"Where did navigation feel confusing?", promptSchema:{ fields:[{ key:"task", label:"What were you trying to do?", type:"text", required:true }, { key:"blocked_step", label:"Where did it get confusing?", type:"textarea", required:true }] } },
+  { id:"ui_scroll", cat:"UI", title:"Scrolling issue", desc:"Scroll area feels wrong or stuck", tags:["scroll","overflow"], aliases:["stuck scroll"], priority:1, prompt:"What scrolling behavior did you expect?", promptSchema:{ fields:[{ key:"screen", label:"Where did this happen?", type:"text", required:true }, { key:"expected", label:"What should have happened?", type:"textarea", required:true }, { key:"actual", label:"What happened instead?", type:"textarea", required:true }] } },
+  { id:"auto_context", cat:"Automation", title:"Auto-suggest best template", desc:"Choose message based on context", tags:["auto","suggest","smart"], aliases:["smarter suggestions"], priority:2, prompt:"What context should the app use?", promptSchema:{ fields:[{ key:"situation", label:"Typical situation", type:"textarea", required:true }, { key:"expected_template", label:"Expected suggestion", type:"text", required:true }] } },
+  { id:"auto_eta", cat:"Automation", title:"Better ETA handling", desc:"ETA prompts, formatting, toggles", tags:["eta","time"], aliases:["eta flow"], priority:2, prompt:"How should ETA handling work?", promptSchema:{ fields:[{ key:"current_behavior", label:"Current behavior", type:"textarea", required:true }, { key:"preferred_behavior", label:"Preferred behavior", type:"textarea", required:true }] } },
+  { id:"bug_copy", cat:"Bug", title:"Copy/paste failure", desc:"Clipboard not working or wrong text", tags:["copy","clipboard","paste"], aliases:["clipboard bug"], priority:2, prompt:"What happened when copying or pasting?", promptSchema:{ fields:[{ key:"what_sent", label:"What text was copied/sent?", type:"textarea", required:true }, { key:"expected", label:"What should have happened?", type:"textarea", required:true }, { key:"repro", label:"Optional reproduction note", type:"textarea", required:false }] } },
+  { id:"bug_save", cat:"Bug", title:"Save/reset failure", desc:"Edits not persisting or reset wrong", tags:["save","reset","storage"], aliases:["data lost"], priority:2, prompt:"What failed to save correctly?", promptSchema:{ fields:[{ key:"where", label:"Where did this happen?", type:"text", required:true }, { key:"lost_change", label:"What change was lost?", type:"textarea", required:true }] } },
+  { id:"bug_crash", cat:"Bug", title:"Crash/error", desc:"Screen breaks or JS error", tags:["crash","error"], aliases:["app broken"], priority:3, prompt:"What did you do right before the error?", promptSchema:{ fields:[{ key:"action", label:"Action before error", type:"text", required:true }, { key:"error_text", label:"Error shown", type:"textarea", required:false }, { key:"expected", label:"What should have happened?", type:"textarea", required:true }] } }
 ];
 
 function norm(s) { return String(s || "").toLowerCase().trim(); }
@@ -36,20 +35,30 @@ function scoreItem(q, item) {
   const t = norm(item.title);
   const d = norm(item.desc);
   const tags = (item.tags || []).map(norm).join(" ");
+  const aliases = (item.aliases || []).map(norm).join(" ");
   const qq = norm(q);
+  const synonyms = {
+    reorder: ["order", "sort", "arrange"],
+    bug: ["error", "broken", "wrong"],
+    rename: ["name", "label", "title"],
+    clicks: ["taps", "steps", "navigation"]
+  };
 
-  if (t === qq) return 100;
-  if (t.startsWith(qq)) return 80;
-  if (t.includes(qq)) return 60;
-  if (tags.includes(qq)) return 55;
+  if (t === qq) return 120;
+  if (t.startsWith(qq)) return 90;
+  if (t.includes(qq)) return 70;
+  if (aliases.includes(qq)) return 66;
+  if (tags.includes(qq)) return 58;
   if (d.includes(qq)) return 35;
 
   const toks = qq.split(/\s+/).filter(Boolean);
   let hits = 0;
   for (const tok of toks) {
-    if (t.includes(tok) || tags.includes(tok) || d.includes(tok)) hits++;
+    const syn = synonyms[tok] || [];
+    if (t.includes(tok) || tags.includes(tok) || d.includes(tok) || aliases.includes(tok)) hits += 2;
+    if (syn.some((s) => t.includes(s) || tags.includes(s) || aliases.includes(s) || d.includes(s))) hits++;
   }
-  return hits ? 20 + hits * 6 : 0;
+  return hits ? 18 + hits * 7 : 0;
 }
 
 function uniqueById(arr) {
@@ -463,448 +472,412 @@ const DashMsgUI = (() => {
     const minimize = document.getElementById("beta-minimize");
     const close = document.getElementById("beta-close");
     const search = document.getElementById("beta-search");
-    const tabs = document.getElementById("beta-tabs");
-    const results = document.getElementById("beta-results");
-    const notes = document.getElementById("beta-notes");
-    const send = document.getElementById("beta-send");
+    const inlineResults = document.getElementById("beta-inline-results");
+    const browseCats = document.getElementById("beta-browse-cats");
+    const catsList = document.getElementById("beta-cats-list");
+    const browseAz = document.getElementById("beta-browse-az");
+    const azList = document.getElementById("beta-az-list");
+    const dynamicFields = document.getElementById("beta-dynamic-fields");
     const selectedRow = document.getElementById("beta-selected");
     const selectedChip = document.getElementById("beta-selected-chip");
     const selectedClear = document.getElementById("beta-selected-clear");
+    const send = document.getElementById("beta-send");
 
-    if (!fab || !miniBar || !panel || !minimize || !close || !search || !tabs || !results || !notes || !send || !selectedRow || !selectedChip || !selectedClear) return;
-
-    document.querySelectorAll("#beta-fab").forEach((el, idx) => { if (idx > 0) el.remove(); });
+    if (!fab || !miniBar || !panel || !minimize || !close || !search || !inlineResults || !browseCats || !catsList || !browseAz || !azList || !dynamicFields || !selectedRow || !selectedChip || !selectedClear || !send) return;
 
     const initialDraft = lsGet(LS_DRAFT, null);
-    let activeTab = initialDraft?.activeTab || "recent";
     let selectedId = initialDraft?.selectedId || null;
     let selectedTitle = initialDraft?.selectedTitle || "";
-    let selectedIndex = 0;
-    const DEFAULT_NOTES_PLACEHOLDER = "Optional details";
+    let panelState = ["closed", "open", "minimized"].includes(initialDraft?.state) ? initialDraft.state : "closed";
+    let expandedCategory = initialDraft?.expandedCategory || null;
+    let draftSchemaValues = initialDraft?.schemaValues || {};
 
-    const useFeedbackPanelState = (() => {
-      const hasInitialDraft = !!(initialDraft?.search?.trim?.() || initialDraft?.notes?.trim?.() || initialDraft?.selectedId || initialDraft?.selectedTitle?.trim?.());
-      let panelState = ["closed", "open", "minimized"].includes(initialDraft?.state)
-        ? initialDraft.state
-        : "closed";
-      if (!hasInitialDraft && panelState !== "closed") panelState = "closed";
-
-      function hasDraft() {
-        return !!(search.value.trim() || notes.value.trim() || selectedId || selectedTitle.trim());
-      }
-
-      function sync() {
-        panel.classList.toggle("is-open", panelState === "open");
-        fab.classList.toggle("is-open", panelState === "open");
-        const showDraftPill = panelState === "minimized" && hasDraft();
-        miniBar.classList.toggle("is-visible", showDraftPill);
-      }
-
-      function set(next) {
-        panelState = next;
-        sync();
-      }
-
-      function get() { return panelState; }
-
-      function cycleFromButton() {
-        if (panelState === "closed") return set("open");
-        if (panelState === "open") return set("minimized");
-        return set("open");
-      }
-
-      return { set, get, sync, cycleFromButton };
-    })();
+    function hasDraft() {
+      const hasSchemaFields = Object.values(getSchemaValues()).some((v) => String(v || "").trim());
+      return !!(search.value.trim() || selectedId || selectedTitle.trim() || hasSchemaFields);
+    }
 
     function getSelectedSuggestion() {
       if (!selectedId) return null;
       return FEEDBACK_CATALOG.find((x) => x.id === selectedId) || null;
     }
 
-    function syncNotesPlaceholder() {
-      const selected = getSelectedSuggestion();
-      notes.placeholder = selected?.prompt || DEFAULT_NOTES_PLACEHOLDER;
+    function getSchemaValues() {
+      const out = {};
+      dynamicFields.querySelectorAll("[data-schema-key]").forEach((el) => {
+        out[el.dataset.schemaKey] = el.value || "";
+      });
+      return out;
     }
 
-    function syncSelectedSuggestionUI() {
+    function syncPanelHeight() {
+      panel.classList.toggle("has-details", !!getSelectedSuggestion());
+    }
+
+    function syncStateUI() {
+      panel.classList.toggle("is-open", panelState === "open");
+      fab.classList.toggle("is-open", panelState === "open");
+      miniBar.classList.toggle("is-visible", panelState === "minimized" && hasDraft());
+      syncPanelHeight();
+    }
+
+    function setPanelState(next) {
+      panelState = next;
+      syncStateUI();
+    }
+
+    function cycleFromButton() {
+      if (panelState === "closed") return setPanelState("open");
+      if (panelState === "open") return setPanelState("minimized");
+      return setPanelState("open");
+    }
+
+    function schemaFieldHtml(field, value) {
+      const id = `beta-schema-${field.key}`;
+      if (field.type === "textarea") {
+        return `
+          <label class="beta-field-label" for="${id}">${field.label}${field.required ? " *" : ""}</label>
+          <textarea id="${id}" class="beta-schema-input" data-schema-key="${field.key}" placeholder="${field.label}" ${field.required ? "required" : ""}>${escapeHtml(value || "")}</textarea>
+        `;
+      }
+      return `
+        <label class="beta-field-label" for="${id}">${field.label}${field.required ? " *" : ""}</label>
+        <input id="${id}" class="beta-schema-input" data-schema-key="${field.key}" type="text" value="${escapeHtml(value || "")}" placeholder="${field.label}" ${field.required ? "required" : ""} />
+      `;
+    }
+
+    function renderDynamicFields() {
+      const selected = getSelectedSuggestion();
+      if (!selected?.promptSchema?.fields?.length) {
+        dynamicFields.hidden = true;
+        dynamicFields.innerHTML = "";
+        syncPanelHeight();
+        return;
+      }
+
+      const saved = { ...draftSchemaValues, ...getSchemaValues() };
+      dynamicFields.hidden = false;
+      dynamicFields.innerHTML = `
+        <div class="beta-fields-title">Details</div>
+        ${selected.promptSchema.fields.map((field) => `<div class="beta-field-row">${schemaFieldHtml(field, saved[field.key])}</div>`).join("")}
+      `;
+      dynamicFields.querySelectorAll("[data-schema-key]").forEach((el) => {
+        el.addEventListener("input", saveDraft);
+      });
+      syncPanelHeight();
+    }
+
+    function renderSelectedChip() {
       const selected = getSelectedSuggestion();
       if (!selected) {
         selectedRow.hidden = true;
         selectedChip.textContent = "";
-        syncNotesPlaceholder();
+        renderDynamicFields();
+        return;
+      }
+      selectedRow.hidden = false;
+      selectedChip.textContent = selected.title;
+      renderDynamicFields();
+    }
+
+    function searchResults(query) {
+      if (!query) return [];
+      return FEEDBACK_CATALOG
+        .map((item) => ({ item, score: scoreItem(query, item) + (item.priority || 0) }))
+        .filter((x) => x.score > 0)
+        .sort((a, b) => b.score - a.score)
+        .map((x) => x.item);
+    }
+
+    function recentItems() {
+      const ids = lsGet(LS_RECENT, []);
+      return ids.map((id) => FEEDBACK_CATALOG.find((x) => x.id === id)).filter(Boolean).slice(0, 5);
+    }
+
+    function rowHtml(item, meta = "") {
+      const isSelected = selectedId === item.id ? " is-selected" : "";
+      return `
+        <button class="beta-inline-item${isSelected}" type="button" data-id="${item.id}">
+          <span class="beta-inline-main">
+            <span class="beta-inline-title">${item.title}</span>
+            <span class="beta-inline-desc">${item.desc}</span>
+          </span>
+          <span class="beta-inline-meta">${meta || item.cat}</span>
+        </button>
+      `;
+    }
+
+    function renderInlineResults() {
+      const q = search.value.trim();
+      const matches = searchResults(q);
+      if (!q) {
+        const recent = recentItems();
+        inlineResults.innerHTML = recent.length
+          ? `<div class="beta-inline-label">Recent</div>${recent.map((it) => rowHtml(it, "Recent")).join("")}`
+          : `<div class="beta-inline-empty">Start typing to find feedback suggestions.</div>`;
         return;
       }
 
-      selectedRow.hidden = false;
-      selectedChip.innerHTML = `<span class="beta-selected-chip-title">${selected.title}</span><span class="beta-selected-chip-cat">${selected.cat}</span>`;
-      syncNotesPlaceholder();
+      const top = matches.slice(0, 5);
+      const more = matches.length > 5;
+      inlineResults.innerHTML = top.length
+        ? `<div class="beta-inline-label">Suggestions</div>${top.map((it) => rowHtml(it)).join("")}${more ? `<button id="beta-show-more" type="button" class="beta-show-more">Show more ▾</button>` : ""}`
+        : `<div class="beta-inline-empty">No matches yet. Try another keyword.</div>`;
+
+      const showMore = document.getElementById("beta-show-more");
+      if (showMore) {
+        showMore.onclick = () => {
+          inlineResults.innerHTML = `<div class="beta-inline-label">Suggestions</div>${matches.map((it) => rowHtml(it)).join("")}`;
+        };
+      }
     }
 
-    function clearSelectedSuggestion() {
-      selectedId = null;
-      selectedTitle = "";
-      syncSelectedSuggestionUI();
-      FeedbackPanel.render();
-      saveDraft();
+    function renderCategories() {
+      const grouped = {};
+      FEEDBACK_CATALOG.forEach((item) => {
+        grouped[item.cat] = grouped[item.cat] || [];
+        grouped[item.cat].push(item);
+      });
+
+      const rows = Object.keys(grouped).sort().map((cat) => {
+        const open = expandedCategory === cat;
+        const items = open ? `<div class="beta-nested-list">${grouped[cat].map((item) => rowHtml(item)).join("")}</div>` : "";
+        return `
+          <div class="beta-cat-block">
+            <button type="button" class="beta-nested-toggle" data-cat="${cat}" aria-expanded="${open ? "true" : "false"}">${cat} <span aria-hidden="true">${open ? "▾" : "▸"}</span></button>
+            ${items}
+          </div>
+        `;
+      }).join("");
+
+      catsList.innerHTML = rows;
     }
 
-    function applySelectedSuggestion(id) {
-      const item = FEEDBACK_CATALOG.find((x) => x.id === id) || null;
+    function renderAz() {
+      const rows = FEEDBACK_CATALOG
+        .slice()
+        .sort((a, b) => a.title.localeCompare(b.title))
+        .map((item) => rowHtml(item, item.cat))
+        .join("");
+      azList.innerHTML = rows;
+    }
+
+    function selectSuggestion(id) {
+      const item = FEEDBACK_CATALOG.find((x) => x.id === id);
       if (!item) return;
       selectedId = item.id;
       selectedTitle = item.title;
       search.value = item.title;
-      syncSelectedSuggestionUI();
-      FeedbackPanel.render();
+      renderSelectedChip();
+      renderInlineResults();
+      renderCategories();
+      renderAz();
       saveDraft();
     }
 
-    function closeWithDiscardFlow() {
-      const hasUnsentDraft = !!(search.value.trim() || notes.value.trim() || selectedId || selectedTitle.trim());
-      if (!hasUnsentDraft) {
-        FeedbackButton.closePanel();
-        saveDraft();
-        return;
-      }
-
-      const discard = window.confirm("Discard feedback?");
-      if (discard) {
-        localStorage.removeItem(LS_DRAFT);
-        search.value = "";
-        notes.value = "";
-        selectedId = null;
-        selectedTitle = "";
-        activeTab = "recent";
-        syncSelectedSuggestionUI();
-        FeedbackPanel.setActiveTabUI();
-        FeedbackPanel.render();
-        FeedbackButton.closePanel();
-        saveDraft();
-        return;
-      }
-
-      FeedbackButton.minimizePanel();
+    function clearSelection() {
+      selectedId = null;
+      selectedTitle = "";
+      renderSelectedChip();
+      renderInlineResults();
+      renderCategories();
+      renderAz();
       saveDraft();
     }
-
-    const FeedbackPanel = (() => {
-      const pins = lsGet(LS_PINS, []);
-      const recents = lsGet(LS_RECENT, []);
-
-      function setActiveTabUI() {
-        tabs.querySelectorAll(".beta-tab").forEach((b) => {
-          b.classList.toggle("is-active", b.dataset.tab === activeTab);
-        });
-      }
-
-      function rowHtml(it) {
-        const meta = pins.includes(it.id) ? "Pinned" : (recents.includes(it.id) ? "Recent" : "");
-        const selectedClass = selectedId === it.id ? " is-selected" : "";
-        return `
-          <div class="beta-item${selectedClass}" data-id="${it.id}">
-            <div class="beta-item-main">
-              <div class="beta-item-title">${it.title}</div>
-              <div class="beta-item-desc">${it.desc}</div>
-            </div>
-            <div class="beta-item-meta">${meta}</div>
-          </div>
-        `;
-      }
-
-      function getTabItems() {
-        const q = norm(search.value);
-        if (activeTab === "categories") return [];
-        if (activeTab === "all") {
-          const scored = FEEDBACK_CATALOG
-            .map((it) => ({ it, s: scoreItem(q, it) }))
-            .filter((x) => (q ? x.s > 0 : true))
-            .sort((a, b) => b.s - a.s);
-
-          const pinnedItems = FEEDBACK_CATALOG.filter((it) => pins.includes(it.id));
-          const recentItems = FEEDBACK_CATALOG.filter((it) => recents.includes(it.id));
-          return uniqueById([...pinnedItems, ...recentItems, ...scored.map((x) => x.it)]);
-        }
-
-        const recentItems = FEEDBACK_CATALOG.filter((it) => recents.includes(it.id));
-        const pinnedItems = FEEDBACK_CATALOG.filter((it) => pins.includes(it.id));
-        return uniqueById([...pinnedItems, ...recentItems]);
-      }
-
-      function renderCategories() {
-        const q = norm(search.value);
-        const cats = [...new Set(FEEDBACK_CATALOG.map((x) => x.cat))]
-          .filter((cat) => (q ? norm(cat).includes(q) : true))
-          .sort();
-
-        const html = cats.map((cat) => {
-          const count = FEEDBACK_CATALOG.filter((x) => x.cat === cat).length;
-          return `
-            <div class="beta-item" data-cat="${cat}">
-              <div class="beta-item-main">
-                <div class="beta-item-title">${cat}</div>
-                <div class="beta-item-desc">${count} options</div>
-              </div>
-              <div class="beta-item-meta">Browse</div>
-            </div>
-          `;
-        }).join("");
-
-        results.innerHTML = html || `<div class="beta-item"><div class="beta-item-main"><div class="beta-item-title">No categories</div><div class="beta-item-desc">Try another keyword.</div></div></div>`;
-      }
-
-      function renderAllItems(list, emptyTitle, emptyDesc) {
-        if (!list.length) {
-          results.innerHTML = `<div class="beta-item"><div class="beta-item-main"><div class="beta-item-title">${emptyTitle}</div><div class="beta-item-desc">${emptyDesc}</div></div></div>`;
-          return;
-        }
-
-        const byCat = {};
-        list.forEach((it) => {
-          byCat[it.cat] = byCat[it.cat] || [];
-          byCat[it.cat].push(it);
-        });
-
-        let html = "";
-        Object.keys(byCat).forEach((cat) => {
-          html += `<div class="beta-group">${cat}</div>`;
-          html += byCat[cat].map((it) => rowHtml(it)).join("");
-        });
-
-        results.innerHTML = html;
-      }
-
-      function render() {
-        if (activeTab === "categories") {
-          renderCategories();
-          return;
-        }
-
-        const list = getTabItems();
-        if (activeTab === "recent") {
-          renderAllItems(list, "No recent feedback", "Use All to pick a suggestion.");
-        } else {
-          renderAllItems(list, "No matches", "Try different keywords.");
-        }
-      }
-
-      function pushRecent(id) {
-        const r = lsGet(LS_RECENT, []);
-        const next = [id, ...r.filter((x) => x !== id)].slice(0, 12);
-        lsSet(LS_RECENT, next);
-      }
-
-      return { setActiveTabUI, render, pushRecent };
-    })();
-
-    const FeedbackButton = (() => {
-      function openPanel() {
-        useFeedbackPanelState.set("open");
-        setTimeout(() => search.focus(), 0);
-      }
-
-      function closePanel() {
-        useFeedbackPanelState.set("closed");
-      }
-
-      function minimizePanel() {
-        useFeedbackPanelState.set("minimized");
-      }
-
-      function cycle() {
-        useFeedbackPanelState.cycleFromButton();
-        if (useFeedbackPanelState.get() === "open") setTimeout(() => search.focus(), 0);
-      }
-
-      return { openPanel, closePanel, minimizePanel, cycle };
-    })();
 
     function saveDraft() {
-      const hasAnyDraft = !!(search.value.trim() || notes.value.trim() || selectedId || selectedTitle.trim());
-      const nextState = hasAnyDraft && useFeedbackPanelState.get() !== "closed"
-        ? useFeedbackPanelState.get()
-        : "closed";
-
+      const schemaValues = getSchemaValues();
+      const hasAny = !!(search.value.trim() || selectedId || selectedTitle.trim() || Object.values(schemaValues).some((v) => String(v || "").trim()));
+      const persistedState = hasAny && panelState !== "closed" ? panelState : "closed";
+      draftSchemaValues = schemaValues;
       lsSet(LS_DRAFT, {
-        state: nextState,
-        activeTab,
+        state: persistedState,
+        search: search.value || "",
         selectedId,
         selectedTitle,
-        search: search.value || "",
-        notes: notes.value || "",
+        expandedCategory,
+        schemaValues,
         updatedAt: Date.now()
       });
-      useFeedbackPanelState.sync();
+      syncStateUI();
     }
 
     function restoreDraft() {
       const draft = lsGet(LS_DRAFT, null);
       if (!draft || typeof draft !== "object") return;
       search.value = draft.search || "";
-      notes.value = draft.notes || "";
       selectedId = draft.selectedId || null;
       selectedTitle = draft.selectedTitle || "";
-      activeTab = draft.activeTab || activeTab;
-      syncSelectedSuggestionUI();
+      expandedCategory = draft.expandedCategory || null;
+      draftSchemaValues = draft.schemaValues || {};
     }
 
-    function selectByIndex(i) {
-      const items = [...results.querySelectorAll(".beta-item[data-id], .beta-item[data-cat]")];
-      if (!items.length) return;
-      selectedIndex = Math.max(0, Math.min(i, items.length - 1));
-      items.forEach((el, idx) => el.classList.toggle("is-selected", idx === selectedIndex));
-      items[selectedIndex].scrollIntoView({ block: "nearest" });
+    function pushRecent(id) {
+      const r = lsGet(LS_RECENT, []);
+      const next = [id, ...r.filter((x) => x !== id)].slice(0, 12);
+      lsSet(LS_RECENT, next);
     }
 
-    tabs.onclick = (e) => {
-      const btn = e.target.closest("[data-tab]");
-      if (!btn) return;
-      activeTab = btn.dataset.tab;
-      FeedbackPanel.setActiveTabUI();
-      FeedbackPanel.render();
-      saveDraft();
-    };
-
-    search.addEventListener("input", () => {
-      activeTab = "all";
-      if (selectedTitle && search.value.trim() !== selectedTitle.trim()) {
-        selectedId = null;
-        selectedTitle = "";
-        syncSelectedSuggestionUI();
-      }
-      FeedbackPanel.setActiveTabUI();
-      FeedbackPanel.render();
-      saveDraft();
-    });
-
-    notes.addEventListener("input", saveDraft);
-
-    results.onclick = (e) => {
-      const el = e.target.closest(".beta-item");
-      if (!el) return;
-
-      const cat = el.dataset.cat;
-      const id = el.dataset.id;
-
-      if (cat) {
-        activeTab = "all";
-        search.value = cat;
-        FeedbackPanel.setActiveTabUI();
-        FeedbackPanel.render();
+    function closeWithDiscardFlow() {
+      const schemaValues = getSchemaValues();
+      const hasUnsent = !!(search.value.trim() || selectedId || selectedTitle.trim() || Object.values(schemaValues).some((v) => String(v || "").trim()));
+      if (!hasUnsent) {
+        setPanelState("closed");
         saveDraft();
         return;
       }
-
-      if (id) applySelectedSuggestion(id);
-    };
-
-    panel.addEventListener("keydown", (e) => {
-      if (useFeedbackPanelState.get() !== "open") return;
-
-      if (e.key === "Escape") { e.preventDefault(); closeWithDiscardFlow(); return; }
-      if (e.key === "ArrowDown") { e.preventDefault(); selectByIndex(selectedIndex + 1); return; }
-      if (e.key === "ArrowUp") { e.preventDefault(); selectByIndex(selectedIndex - 1); return; }
-
-      if (e.key === "Enter" && e.target === search) {
-        e.preventDefault();
-        const items = [...results.querySelectorAll(".beta-item[data-id], .beta-item[data-cat]")];
-        const el = items[selectedIndex];
-        if (!el) return;
-
-        if (el.dataset.cat) {
-          activeTab = "all";
-          search.value = el.dataset.cat;
-          FeedbackPanel.setActiveTabUI();
-          FeedbackPanel.render();
-        } else if (el.dataset.id) {
-          applySelectedSuggestion(el.dataset.id);
-          return;
-        }
-        saveDraft();
-      }
-    });
-
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && useFeedbackPanelState.get() !== "closed") {
-        closeWithDiscardFlow();
-      }
-    });
-
-    async function enqueueOrSend(payload) {
-      try {
-        await window.DashMsg?.sendFeedback?.(payload);
-        return true;
-      } catch {
-        const q = lsGet(LS_QUEUE, []);
-        q.push(payload);
-        lsSet(LS_QUEUE, q);
-        return false;
-      }
-    }
-
-    send.onclick = async () => {
-      const qTitle = norm(search.value);
-      let cmd = selectedId ? FEEDBACK_CATALOG.find((x) => x.id === selectedId) : null;
-      if (!cmd && qTitle) cmd = FEEDBACK_CATALOG.find((x) => norm(x.title) === qTitle) || null;
-
-      const payload = {
-        type: "smart_feedback",
-        command_id: cmd?.id || null,
-        command_title: cmd?.title || search.value || null,
-        category: cmd?.cat || null,
-        notes: notes.value || "",
-        context: getFeedbackContext(),
-        ts: Date.now()
-      };
-
-      const ok = await enqueueOrSend(payload);
-      if (cmd?.id) FeedbackPanel.pushRecent(cmd.id);
-
-      if (ok) {
+      const discard = window.confirm("Discard feedback?");
+      if (discard) {
         localStorage.removeItem(LS_DRAFT);
-        search.value = "";
-        notes.value = "";
         selectedId = null;
         selectedTitle = "";
-        activeTab = "recent";
-        syncSelectedSuggestionUI();
-      } else {
+        search.value = "";
+        expandedCategory = null;
+        dynamicFields.innerHTML = "";
+        dynamicFields.hidden = true;
+        draftSchemaValues = {};
+        renderSelectedChip();
+        renderInlineResults();
+        renderCategories();
+        renderAz();
+        setPanelState("closed");
         saveDraft();
+        return;
       }
-
-      FeedbackButton.closePanel();
-      useFeedbackPanelState.sync();
-      window.DashMsgUI?.toast?.(ok ? "Sent" : "Queued", true, "Saved");
-    };
+      setPanelState("minimized");
+      saveDraft();
+    }
 
     fab.onclick = () => {
-      FeedbackButton.cycle();
+      cycleFromButton();
+      if (panelState === "open") setTimeout(() => search.focus(), 0);
       saveDraft();
     };
 
     miniBar.onclick = () => {
-      FeedbackButton.openPanel();
+      setPanelState("open");
+      setTimeout(() => search.focus(), 0);
       saveDraft();
-    };
-
-    selectedClear.onclick = () => {
-      clearSelectedSuggestion();
     };
 
     minimize.onclick = () => {
-      FeedbackButton.minimizePanel();
+      setPanelState("minimized");
       saveDraft();
     };
 
-    close.onclick = () => {
-      closeWithDiscardFlow();
+    close.onclick = () => closeWithDiscardFlow();
+    selectedClear.onclick = () => clearSelection();
+
+    search.addEventListener("input", () => {
+      if (selectedTitle && search.value.trim() !== selectedTitle.trim()) {
+        selectedId = null;
+        selectedTitle = "";
+      }
+      renderSelectedChip();
+      renderInlineResults();
+      saveDraft();
+    });
+
+    function onSuggestionClick(e) {
+      const row = e.target.closest("[data-id]");
+      if (!row) return;
+      selectSuggestion(row.dataset.id);
+    }
+
+    inlineResults.addEventListener("click", onSuggestionClick);
+    catsList.addEventListener("click", (e) => {
+      const toggle = e.target.closest(".beta-nested-toggle");
+      if (toggle) {
+        const cat = toggle.dataset.cat;
+        expandedCategory = expandedCategory === cat ? null : cat;
+        renderCategories();
+        saveDraft();
+        return;
+      }
+      onSuggestionClick(e);
+    });
+    azList.addEventListener("click", onSuggestionClick);
+
+    browseCats.onclick = () => {
+      const open = browseCats.getAttribute("aria-expanded") === "true";
+      browseCats.setAttribute("aria-expanded", open ? "false" : "true");
+      browseCats.querySelector("span").textContent = open ? "▸" : "▾";
+      catsList.hidden = open;
+      if (!open) renderCategories();
+      saveDraft();
+    };
+
+    browseAz.onclick = () => {
+      const open = browseAz.getAttribute("aria-expanded") === "true";
+      browseAz.setAttribute("aria-expanded", open ? "false" : "true");
+      browseAz.querySelector("span").textContent = open ? "▸" : "▾";
+      azList.hidden = open;
+      if (!open) renderAz();
+      saveDraft();
+    };
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && panelState !== "closed") closeWithDiscardFlow();
+    });
+
+    send.onclick = async () => {
+      const selected = getSelectedSuggestion();
+      const schemaValues = getSchemaValues();
+      const payload = {
+        type: "smart_feedback",
+        command_id: selected?.id || null,
+        command_title: selected?.title || search.value || null,
+        category: selected?.cat || null,
+        notes: JSON.stringify(schemaValues),
+        free_text: search.value || null,
+        context: getFeedbackContext(),
+        ts: Date.now()
+      };
+
+      let ok = true;
+      try {
+        await window.DashMsg?.sendFeedback?.(payload);
+      } catch {
+        ok = false;
+        const q = lsGet(LS_QUEUE, []);
+        q.push(payload);
+        lsSet(LS_QUEUE, q);
+      }
+
+      if (selected?.id) pushRecent(selected.id);
+
+      if (ok) {
+        localStorage.removeItem(LS_DRAFT);
+        selectedId = null;
+        selectedTitle = "";
+        search.value = "";
+        expandedCategory = null;
+        dynamicFields.innerHTML = "";
+        dynamicFields.hidden = true;
+        draftSchemaValues = {};
+        setPanelState("closed");
+      } else {
+        saveDraft();
+        setPanelState("minimized");
+      }
+
+      renderSelectedChip();
+      renderInlineResults();
+      renderCategories();
+      renderAz();
+      syncStateUI();
+      window.DashMsgUI?.toast?.(ok ? "Sent" : "Queued", true, "Saved");
     };
 
     restoreDraft();
-    syncSelectedSuggestionUI();
-    FeedbackPanel.setActiveTabUI();
-    FeedbackPanel.render();
-    useFeedbackPanelState.sync();
+    if (!hasDraft() && panelState !== "closed") panelState = "closed";
+    renderSelectedChip();
+    renderInlineResults();
+    renderCategories();
+    renderAz();
+    syncStateUI();
   }
+
 
 
   return {
