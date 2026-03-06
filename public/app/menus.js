@@ -102,8 +102,7 @@ const DashMsgMenus = {
       {
         header: "Preferences",
         items: [
-          { label: "Emoji", more: true, action: { type: "nav", screen: "pref_emoji" } },
-          { label: "Name Prompt", more: true, action: { type: "nav", screen: "pref_name" } }
+          { label: "Emoji", more: true, action: { type: "nav", screen: "pref_emoji" } }
         ]
       },
       {

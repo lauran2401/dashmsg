@@ -210,8 +210,6 @@ const DashMsgUI = (() => {
 
       setEmojiOn: () => setPrefAndRefresh("emoji_on", true),
       setEmojiOff: () => setPrefAndRefresh("emoji_on", false),
-      setNamePromptOn: () => setPrefAndRefresh("name_prompt", true),
-      setNamePromptOff: () => setPrefAndRefresh("name_prompt", false),
 
     };
 
@@ -284,7 +282,7 @@ const DashMsgUI = (() => {
     while ((window.DashMsg?.getNavDepth?.() || 0) > 0) {
       window.DashMsg.popNav();
     }
-    navigateTo("main", { push: true });
+    navigateTo("main", { push: false });
   }
 
   /* -----------------------
@@ -431,9 +429,6 @@ const DashMsgUI = (() => {
 
     setEmojiOn: () => setPrefAndRefresh("emoji_on", true),
     setEmojiOff: () => setPrefAndRefresh("emoji_on", false),
-
-    setNamePromptOn: () => setPrefAndRefresh("name_prompt", true),
-    setNamePromptOff: () => setPrefAndRefresh("name_prompt", false),
 
     copyTesterId,
     currentScreen: () => currentScreen
