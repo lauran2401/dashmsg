@@ -76,6 +76,7 @@
 ========================= */
 *{ box-sizing:border-box; -webkit-font-smoothing: antialiased; }
 html,body{ height:100%; }
+html{ -webkit-text-size-adjust:100%; }
 body{
   margin:0;
   background: var(--bg);

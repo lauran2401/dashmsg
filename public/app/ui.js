@@ -343,6 +343,7 @@ const DashMsgUI = (() => {
   const app = document.getElementById("app");
   let currentScreen = "main";
   let toastTimer = null;
+  let lastActionType = null;
 
   function escapeHtml(value) {
     const div = document.createElement("div");
@@ -449,6 +450,7 @@ const DashMsgUI = (() => {
 
   function dispatchAction(action) {
     if (!action || typeof action !== "object") return;
+    lastActionType = action.type || null;
 
     const FN = {
       setETA,

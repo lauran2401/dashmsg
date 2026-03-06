@@ -1,0 +1,14 @@
+{
+  "suggestions": [
+    {"id":"rename_template","title":"Rename template","description":"Allow editing the name of a message template","categories":["Templates","UI"],"tags":["rename","label","title"],"aliases":["change template name"],"priority":3,"prompt":"What should the template be renamed to?","globalUseCount":42},
+    {"id":"reorder_templates","title":"Reorder templates","description":"Rearrange templates in a more useful default order","categories":["Templates"],"tags":["reorder","sort"],"aliases":["move template"],"priority":2,"globalUseCount":31},
+    {"id":"auto_suggest_message","title":"Auto suggest best message","description":"Choose a likely message based on context","categories":["Automation"],"tags":["auto","smart","context"],"aliases":["smart suggestion"],"priority":3,"globalUseCount":28},
+    {"id":"improve_navigation","title":"Improve navigation","description":"Make it easier to find and return between screens","categories":["Navigation","UI"],"tags":["back","menu","find"],"aliases":["hard to navigate"],"priority":2,"globalUseCount":22},
+    {"id":"faster_loading","title":"Improve loading speed","description":"Reduce lag when opening app and sections","categories":["Performance"],"tags":["slow","lag","startup"],"aliases":["speed up app"],"priority":2,"globalUseCount":19},
+    {"id":"notification_controls","title":"Notification controls","description":"Add better notification tuning options","categories":["Notifications"],"tags":["alert","sound","mute"],"aliases":["notification settings"],"priority":1,"globalUseCount":12},
+    {"id":"message_copy_bug","title":"Fix message copy issue","description":"Clipboard copy sometimes fails","categories":["Messages"],"tags":["copy","clipboard"],"aliases":["cannot copy"],"priority":3,"globalUseCount":25},
+    {"id":"store_shortcuts","title":"Store shortcuts","description":"Quick access for most-used stores","categories":["Stores"],"tags":["store","favorites"],"aliases":["favorite stores"],"priority":2,"globalUseCount":17},
+    {"id":"order_eta_prompt","title":"Improve ETA prompts","description":"Clearer ETA interactions for order updates","categories":["Orders","Automation"],"tags":["eta","time"],"aliases":["eta entry"],"priority":2,"globalUseCount":26},
+    {"id":"general_ideas","title":"General app improvement","description":"Share an idea that does not fit a category","categories":["General ideas"],"tags":["idea","suggestion"],"aliases":["misc improvement"],"priority":1,"globalUseCount":8}
+  ]
+}
