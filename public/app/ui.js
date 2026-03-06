@@ -467,23 +467,30 @@ const DashMsgUI = (() => {
     const results = document.getElementById("beta-results");
     const notes = document.getElementById("beta-notes");
     const send = document.getElementById("beta-send");
+    const selectedRow = document.getElementById("beta-selected");
+    const selectedChip = document.getElementById("beta-selected-chip");
+    const selectedClear = document.getElementById("beta-selected-clear");
 
-    if (!fab || !miniBar || !panel || !minimize || !close || !search || !tabs || !results || !notes || !send) return;
+    if (!fab || !miniBar || !panel || !minimize || !close || !search || !tabs || !results || !notes || !send || !selectedRow || !selectedChip || !selectedClear) return;
 
     document.querySelectorAll("#beta-fab").forEach((el, idx) => { if (idx > 0) el.remove(); });
 
     const initialDraft = lsGet(LS_DRAFT, null);
     let activeTab = initialDraft?.activeTab || "recent";
     let selectedId = initialDraft?.selectedId || null;
+    let selectedTitle = initialDraft?.selectedTitle || "";
     let selectedIndex = 0;
+    const DEFAULT_NOTES_PLACEHOLDER = "Optional details";
 
     const useFeedbackPanelState = (() => {
+      const hasInitialDraft = !!(initialDraft?.search?.trim?.() || initialDraft?.notes?.trim?.() || initialDraft?.selectedId || initialDraft?.selectedTitle?.trim?.());
       let panelState = ["closed", "open", "minimized"].includes(initialDraft?.state)
         ? initialDraft.state
         : "closed";
+      if (!hasInitialDraft && panelState !== "closed") panelState = "closed";
 
       function hasDraft() {
-        return !!(search.value.trim() || notes.value.trim() || selectedId);
+        return !!(search.value.trim() || notes.value.trim() || selectedId || selectedTitle.trim());
       }
 
       function sync() {
@@ -508,6 +515,77 @@ const DashMsgUI = (() => {
 
       return { set, get, sync, cycleFromButton };
     })();
+
+    function getSelectedSuggestion() {
+      if (!selectedId) return null;
+      return FEEDBACK_CATALOG.find((x) => x.id === selectedId) || null;
+    }
+
+    function syncNotesPlaceholder() {
+      const selected = getSelectedSuggestion();
+      notes.placeholder = selected?.prompt || DEFAULT_NOTES_PLACEHOLDER;
+    }
+
+    function syncSelectedSuggestionUI() {
+      const selected = getSelectedSuggestion();
+      if (!selected) {
+        selectedRow.hidden = true;
+        selectedChip.textContent = "";
+        syncNotesPlaceholder();
+        return;
+      }
+
+      selectedRow.hidden = false;
+      selectedChip.innerHTML = `<span class="beta-selected-chip-title">${selected.title}</span><span class="beta-selected-chip-cat">${selected.cat}</span>`;
+      syncNotesPlaceholder();
+    }
+
+    function clearSelectedSuggestion() {
+      selectedId = null;
+      selectedTitle = "";
+      syncSelectedSuggestionUI();
+      FeedbackPanel.render();
+      saveDraft();
+    }
+
+    function applySelectedSuggestion(id) {
+      const item = FEEDBACK_CATALOG.find((x) => x.id === id) || null;
+      if (!item) return;
+      selectedId = item.id;
+      selectedTitle = item.title;
+      search.value = item.title;
+      syncSelectedSuggestionUI();
+      FeedbackPanel.render();
+      saveDraft();
+    }
+
+    function closeWithDiscardFlow() {
+      const hasUnsentDraft = !!(search.value.trim() || notes.value.trim() || selectedId || selectedTitle.trim());
+      if (!hasUnsentDraft) {
+        FeedbackButton.closePanel();
+        saveDraft();
+        return;
+      }
+
+      const discard = window.confirm("Discard feedback?");
+      if (discard) {
+        localStorage.removeItem(LS_DRAFT);
+        search.value = "";
+        notes.value = "";
+        selectedId = null;
+        selectedTitle = "";
+        activeTab = "recent";
+        syncSelectedSuggestionUI();
+        FeedbackPanel.setActiveTabUI();
+        FeedbackPanel.render();
+        FeedbackButton.closePanel();
+        saveDraft();
+        return;
+      }
+
+      FeedbackButton.minimizePanel();
+      saveDraft();
+    }
 
     const FeedbackPanel = (() => {
       const pins = lsGet(LS_PINS, []);
@@ -641,10 +719,16 @@ const DashMsgUI = (() => {
     })();
 
     function saveDraft() {
+      const hasAnyDraft = !!(search.value.trim() || notes.value.trim() || selectedId || selectedTitle.trim());
+      const nextState = hasAnyDraft && useFeedbackPanelState.get() !== "closed"
+        ? useFeedbackPanelState.get()
+        : "closed";
+
       lsSet(LS_DRAFT, {
-        state: useFeedbackPanelState.get() === "closed" ? "closed" : useFeedbackPanelState.get(),
+        state: nextState,
         activeTab,
         selectedId,
+        selectedTitle,
         search: search.value || "",
         notes: notes.value || "",
         updatedAt: Date.now()
@@ -658,7 +742,9 @@ const DashMsgUI = (() => {
       search.value = draft.search || "";
       notes.value = draft.notes || "";
       selectedId = draft.selectedId || null;
+      selectedTitle = draft.selectedTitle || "";
       activeTab = draft.activeTab || activeTab;
+      syncSelectedSuggestionUI();
     }
 
     function selectByIndex(i) {
@@ -680,6 +766,11 @@ const DashMsgUI = (() => {
 
     search.addEventListener("input", () => {
       activeTab = "all";
+      if (selectedTitle && search.value.trim() !== selectedTitle.trim()) {
+        selectedId = null;
+        selectedTitle = "";
+        syncSelectedSuggestionUI();
+      }
       FeedbackPanel.setActiveTabUI();
       FeedbackPanel.render();
       saveDraft();
@@ -703,19 +794,13 @@ const DashMsgUI = (() => {
         return;
       }
 
-      if (id) {
-        selectedId = id;
-        const item = FEEDBACK_CATALOG.find((x) => x.id === id);
-        if (item) search.value = item.title;
-        FeedbackPanel.render();
-        saveDraft();
-      }
+      if (id) applySelectedSuggestion(id);
     };
 
     panel.addEventListener("keydown", (e) => {
       if (useFeedbackPanelState.get() !== "open") return;
 
-      if (e.key === "Escape") { e.preventDefault(); FeedbackButton.closePanel(); saveDraft(); return; }
+      if (e.key === "Escape") { e.preventDefault(); closeWithDiscardFlow(); return; }
       if (e.key === "ArrowDown") { e.preventDefault(); selectByIndex(selectedIndex + 1); return; }
       if (e.key === "ArrowUp") { e.preventDefault(); selectByIndex(selectedIndex - 1); return; }
 
@@ -731,10 +816,8 @@ const DashMsgUI = (() => {
           FeedbackPanel.setActiveTabUI();
           FeedbackPanel.render();
         } else if (el.dataset.id) {
-          selectedId = el.dataset.id;
-          const item = FEEDBACK_CATALOG.find((x) => x.id === selectedId);
-          if (item) search.value = item.title;
-          FeedbackPanel.render();
+          applySelectedSuggestion(el.dataset.id);
+          return;
         }
         saveDraft();
       }
@@ -742,8 +825,7 @@ const DashMsgUI = (() => {
 
     document.addEventListener("keydown", (e) => {
       if (e.key === "Escape" && useFeedbackPanelState.get() !== "closed") {
-        FeedbackButton.closePanel();
-        saveDraft();
+        closeWithDiscardFlow();
       }
     });
 
@@ -782,7 +864,9 @@ const DashMsgUI = (() => {
         search.value = "";
         notes.value = "";
         selectedId = null;
+        selectedTitle = "";
         activeTab = "recent";
+        syncSelectedSuggestionUI();
       } else {
         saveDraft();
       }
@@ -802,17 +886,21 @@ const DashMsgUI = (() => {
       saveDraft();
     };
 
+    selectedClear.onclick = () => {
+      clearSelectedSuggestion();
+    };
+
     minimize.onclick = () => {
       FeedbackButton.minimizePanel();
       saveDraft();
     };
 
     close.onclick = () => {
-      FeedbackButton.closePanel();
-      saveDraft();
+      closeWithDiscardFlow();
     };
 
     restoreDraft();
+    syncSelectedSuggestionUI();
     FeedbackPanel.setActiveTabUI();
     FeedbackPanel.render();
     useFeedbackPanelState.sync();
