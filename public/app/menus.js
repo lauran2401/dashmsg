@@ -70,7 +70,17 @@ const DashMsgMenus = {
       {
         items: [
           { label: "Heading Your Way", action: { type: "template", key: "HEADING_NO_ETA", category: "Delivery", extras: {} } },
-          { label: "Heading With ETA", action: { type: "function", name: "setETA" } },
+          {
+            label: "Heading With ETA",
+            action: { type: "function", name: "setETA" },
+            input: {
+              id: "etaMinutes",
+              type: "number",
+              min: 1,
+              max: 59,
+              placeholder: "Minutes"
+            }
+          },
           { label: "Traffic Delay", action: { type: "template", key: "TRAFFIC_DELAY", category: "Delivery", extras: {} } }
         ]
       }
