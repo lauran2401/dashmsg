@@ -216,7 +216,61 @@
   cursor: not-allowed;
 }
 
+/* =========================
+   Compose Mode (keyboard safe)
+========================= */
 
+.fb-root.fb-compose-mode {
+  right: 0;
+  left: 0;
+  display: flex;
+  justify-content: center;
+}
+
+.fb-root.fb-compose-mode .fb-panel {
+  position: fixed;
+
+  /* move panel above keyboard zone */
+  bottom: auto;
+  top: max(12px, calc(env(safe-area-inset-top) + 12px));
+
+  /* stable centered card */
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+
+  width: min(92vw, 420px);
+
+  /* prevent huge height */
+  height: min(50svh, 380px);
+
+  display: flex;
+  flex-direction: column;
+}
+
+/* make textarea area flexible */
+
+.fb-root.fb-compose-mode .fb-message {
+  flex: 1;
+  min-height: 90px;
+  max-height: none;
+}
+
+/* keep footer visible */
+
+.fb-root.fb-compose-mode .fb-footer {
+  margin-top: 8px;
+}
+
+/* tighten layout while typing */
+
+.fb-root.fb-compose-mode .fb-types {
+  margin-bottom: 6px;
+}
+
+.fb-root.fb-compose-mode .fb-message {
+  margin-bottom: 6px;
+}
 /* =========================
    Base
 ========================= */
