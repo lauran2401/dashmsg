@@ -1,6 +1,71 @@
-import { API_HEADERS } from "./config.js";
-
 // public/app/ui.js — fixed (Home upper-left, Back only at bottom, no broken braces)
+
+const LS_RECENT = "dashmsg_beta_recent";
+const LS_PINS = "dashmsg_beta_pins";
+const LS_QUEUE = "dashmsg_beta_queue";
+const LS_DRAFT = "dashmsg_feedback_draft";
+
+function lsGet(key, fallback) {
+  try { return JSON.parse(localStorage.getItem(key) || ""); } catch { return fallback; }
+}
+
+function lsSet(key, val) {
+  localStorage.setItem(key, JSON.stringify(val));
+}
+
+const FEEDBACK_CATALOG = [
+  { id:"tpl_rename", cat:"Templates", title:"Rename template", desc:"Improve labels people see in the editor", tags:["name","label","rename","title"] },
+  { id:"tpl_reorder", cat:"Templates", title:"Change template order", desc:"Better default ordering and grouping", tags:["order","sort","group"] },
+  { id:"tpl_wording", cat:"Templates", title:"Improve template wording", desc:"Make message clearer, shorter, more polite", tags:["copy","tone","wording","text"] },
+  { id:"tpl_add", cat:"Templates", title:"Add new template", desc:"Missing scenario, add a new preset", tags:["new","missing","scenario"] },
+  { id:"tpl_vars", cat:"Templates", title:"Add placeholder/variable", desc:"Name/ETA/store/hot bag placeholders", tags:["variable","placeholder","eta","name"] },
+  { id:"ui_spacing", cat:"UI", title:"Fix spacing/layout", desc:"Padding, alignment, dense/airy", tags:["spacing","layout","padding"] },
+  { id:"ui_nav", cat:"UI", title:"Navigation confusion", desc:"Hard to find a screen or go back", tags:["navigation","back","home"] },
+  { id:"ui_scroll", cat:"UI", title:"Scrolling issue", desc:"Scroll area feels wrong or stuck", tags:["scroll","overflow"] },
+  { id:"auto_context", cat:"Automation", title:"Auto-suggest best template", desc:"Choose message based on context", tags:["auto","suggest","smart"] },
+  { id:"auto_eta", cat:"Automation", title:"Better ETA handling", desc:"ETA prompts, formatting, toggles", tags:["eta","time"] },
+  { id:"bug_copy", cat:"Bug", title:"Copy/paste failure", desc:"Clipboard not working or wrong text", tags:["copy","clipboard","paste"] },
+  { id:"bug_save", cat:"Bug", title:"Save/reset failure", desc:"Edits not persisting or reset wrong", tags:["save","reset","storage"] },
+  { id:"bug_crash", cat:"Bug", title:"Crash/error", desc:"Screen breaks or JS error", tags:["crash","error"] },
+];
+
+function norm(s) { return String(s || "").toLowerCase().trim(); }
+
+function scoreItem(q, item) {
+  if (!q) return 0;
+  const t = norm(item.title);
+  const d = norm(item.desc);
+  const tags = (item.tags || []).map(norm).join(" ");
+  const qq = norm(q);
+
+  if (t === qq) return 100;
+  if (t.startsWith(qq)) return 80;
+  if (t.includes(qq)) return 60;
+  if (tags.includes(qq)) return 55;
+  if (d.includes(qq)) return 35;
+
+  const toks = qq.split(/\s+/).filter(Boolean);
+  let hits = 0;
+  for (const tok of toks) {
+    if (t.includes(tok) || tags.includes(tok) || d.includes(tok)) hits++;
+  }
+  return hits ? 20 + hits * 6 : 0;
+}
+
+function uniqueById(arr) {
+  const seen = new Set();
+  return arr.filter((x) => (seen.has(x.id) ? false : (seen.add(x.id), true)));
+}
+
+function getFeedbackContext() {
+  return {
+    url: location.href,
+    screen: window.DashMsgUI?.currentScreen?.() || null,
+    app_version: window.DashMsg?.defaults?.()?.app_version || null,
+    tester_id: localStorage.getItem("dashmsg_tester_id") || null,
+    debug: !!localStorage.getItem("dashmsg_debug")
+  };
+}
 
 const DashMsgUI = (() => {
   const app = document.getElementById("app");
@@ -375,11 +440,11 @@ const DashMsgUI = (() => {
     const message = input?.value?.trim();
     if (!message) return toast("Please enter feedback", false);
 
-    const res = await window.DashMsg?.sendFeedback?.(message);
-    if (res?.ok) {
+    try {
+      await window.DashMsg?.sendFeedback?.({ type: "legacy_feedback", notes: message, ts: Date.now() });
       toast("Feedback sent", true, "Thank you");
       navigateTo("main", { push: true });
-    } else {
+    } catch {
       toast("Feedback failed", false);
     }
   }
@@ -389,6 +454,370 @@ const DashMsgUI = (() => {
     const ok = await window.DashMsg?.copyToClipboard?.(tester);
     toast(ok ? "Tester ID copied" : "Copy failed", !!ok);
   }
+
+
+  function initFeedbackCommandPalette() {
+    const fab = document.getElementById("beta-fab");
+    const miniBar = document.getElementById("beta-minibar");
+    const panel = document.getElementById("beta-panel");
+    const minimize = document.getElementById("beta-minimize");
+    const close = document.getElementById("beta-close");
+    const search = document.getElementById("beta-search");
+    const tabs = document.getElementById("beta-tabs");
+    const results = document.getElementById("beta-results");
+    const notes = document.getElementById("beta-notes");
+    const send = document.getElementById("beta-send");
+
+    if (!fab || !miniBar || !panel || !minimize || !close || !search || !tabs || !results || !notes || !send) return;
+
+    document.querySelectorAll("#beta-fab").forEach((el, idx) => { if (idx > 0) el.remove(); });
+
+    const initialDraft = lsGet(LS_DRAFT, null);
+    let activeTab = initialDraft?.activeTab || "recent";
+    let selectedId = initialDraft?.selectedId || null;
+    let selectedIndex = 0;
+
+    const useFeedbackPanelState = (() => {
+      let panelState = ["closed", "open", "minimized"].includes(initialDraft?.state)
+        ? initialDraft.state
+        : "closed";
+
+      function hasDraft() {
+        return !!(search.value.trim() || notes.value.trim() || selectedId);
+      }
+
+      function sync() {
+        panel.classList.toggle("is-open", panelState === "open");
+        fab.classList.toggle("is-open", panelState === "open");
+        const showDraftPill = panelState === "minimized" && hasDraft();
+        miniBar.classList.toggle("is-visible", showDraftPill);
+      }
+
+      function set(next) {
+        panelState = next;
+        sync();
+      }
+
+      function get() { return panelState; }
+
+      function cycleFromButton() {
+        if (panelState === "closed") return set("open");
+        if (panelState === "open") return set("minimized");
+        return set("open");
+      }
+
+      return { set, get, sync, cycleFromButton };
+    })();
+
+    const FeedbackPanel = (() => {
+      const pins = lsGet(LS_PINS, []);
+      const recents = lsGet(LS_RECENT, []);
+
+      function setActiveTabUI() {
+        tabs.querySelectorAll(".beta-tab").forEach((b) => {
+          b.classList.toggle("is-active", b.dataset.tab === activeTab);
+        });
+      }
+
+      function rowHtml(it) {
+        const meta = pins.includes(it.id) ? "Pinned" : (recents.includes(it.id) ? "Recent" : "");
+        const selectedClass = selectedId === it.id ? " is-selected" : "";
+        return `
+          <div class="beta-item${selectedClass}" data-id="${it.id}">
+            <div class="beta-item-main">
+              <div class="beta-item-title">${it.title}</div>
+              <div class="beta-item-desc">${it.desc}</div>
+            </div>
+            <div class="beta-item-meta">${meta}</div>
+          </div>
+        `;
+      }
+
+      function getTabItems() {
+        const q = norm(search.value);
+        if (activeTab === "categories") return [];
+        if (activeTab === "all") {
+          const scored = FEEDBACK_CATALOG
+            .map((it) => ({ it, s: scoreItem(q, it) }))
+            .filter((x) => (q ? x.s > 0 : true))
+            .sort((a, b) => b.s - a.s);
+
+          const pinnedItems = FEEDBACK_CATALOG.filter((it) => pins.includes(it.id));
+          const recentItems = FEEDBACK_CATALOG.filter((it) => recents.includes(it.id));
+          return uniqueById([...pinnedItems, ...recentItems, ...scored.map((x) => x.it)]);
+        }
+
+        const recentItems = FEEDBACK_CATALOG.filter((it) => recents.includes(it.id));
+        const pinnedItems = FEEDBACK_CATALOG.filter((it) => pins.includes(it.id));
+        return uniqueById([...pinnedItems, ...recentItems]);
+      }
+
+      function renderCategories() {
+        const q = norm(search.value);
+        const cats = [...new Set(FEEDBACK_CATALOG.map((x) => x.cat))]
+          .filter((cat) => (q ? norm(cat).includes(q) : true))
+          .sort();
+
+        const html = cats.map((cat) => {
+          const count = FEEDBACK_CATALOG.filter((x) => x.cat === cat).length;
+          return `
+            <div class="beta-item" data-cat="${cat}">
+              <div class="beta-item-main">
+                <div class="beta-item-title">${cat}</div>
+                <div class="beta-item-desc">${count} options</div>
+              </div>
+              <div class="beta-item-meta">Browse</div>
+            </div>
+          `;
+        }).join("");
+
+        results.innerHTML = html || `<div class="beta-item"><div class="beta-item-main"><div class="beta-item-title">No categories</div><div class="beta-item-desc">Try another keyword.</div></div></div>`;
+      }
+
+      function renderAllItems(list, emptyTitle, emptyDesc) {
+        if (!list.length) {
+          results.innerHTML = `<div class="beta-item"><div class="beta-item-main"><div class="beta-item-title">${emptyTitle}</div><div class="beta-item-desc">${emptyDesc}</div></div></div>`;
+          return;
+        }
+
+        const byCat = {};
+        list.forEach((it) => {
+          byCat[it.cat] = byCat[it.cat] || [];
+          byCat[it.cat].push(it);
+        });
+
+        let html = "";
+        Object.keys(byCat).forEach((cat) => {
+          html += `<div class="beta-group">${cat}</div>`;
+          html += byCat[cat].map((it) => rowHtml(it)).join("");
+        });
+
+        results.innerHTML = html;
+      }
+
+      function render() {
+        if (activeTab === "categories") {
+          renderCategories();
+          return;
+        }
+
+        const list = getTabItems();
+        if (activeTab === "recent") {
+          renderAllItems(list, "No recent feedback", "Use All to pick a suggestion.");
+        } else {
+          renderAllItems(list, "No matches", "Try different keywords.");
+        }
+      }
+
+      function pushRecent(id) {
+        const r = lsGet(LS_RECENT, []);
+        const next = [id, ...r.filter((x) => x !== id)].slice(0, 12);
+        lsSet(LS_RECENT, next);
+      }
+
+      return { setActiveTabUI, render, pushRecent };
+    })();
+
+    const FeedbackButton = (() => {
+      function openPanel() {
+        useFeedbackPanelState.set("open");
+        setTimeout(() => search.focus(), 0);
+      }
+
+      function closePanel() {
+        useFeedbackPanelState.set("closed");
+      }
+
+      function minimizePanel() {
+        useFeedbackPanelState.set("minimized");
+      }
+
+      function cycle() {
+        useFeedbackPanelState.cycleFromButton();
+        if (useFeedbackPanelState.get() === "open") setTimeout(() => search.focus(), 0);
+      }
+
+      return { openPanel, closePanel, minimizePanel, cycle };
+    })();
+
+    function saveDraft() {
+      lsSet(LS_DRAFT, {
+        state: useFeedbackPanelState.get() === "closed" ? "closed" : useFeedbackPanelState.get(),
+        activeTab,
+        selectedId,
+        search: search.value || "",
+        notes: notes.value || "",
+        updatedAt: Date.now()
+      });
+      useFeedbackPanelState.sync();
+    }
+
+    function restoreDraft() {
+      const draft = lsGet(LS_DRAFT, null);
+      if (!draft || typeof draft !== "object") return;
+      search.value = draft.search || "";
+      notes.value = draft.notes || "";
+      selectedId = draft.selectedId || null;
+      activeTab = draft.activeTab || activeTab;
+    }
+
+    function selectByIndex(i) {
+      const items = [...results.querySelectorAll(".beta-item[data-id], .beta-item[data-cat]")];
+      if (!items.length) return;
+      selectedIndex = Math.max(0, Math.min(i, items.length - 1));
+      items.forEach((el, idx) => el.classList.toggle("is-selected", idx === selectedIndex));
+      items[selectedIndex].scrollIntoView({ block: "nearest" });
+    }
+
+    tabs.onclick = (e) => {
+      const btn = e.target.closest("[data-tab]");
+      if (!btn) return;
+      activeTab = btn.dataset.tab;
+      FeedbackPanel.setActiveTabUI();
+      FeedbackPanel.render();
+      saveDraft();
+    };
+
+    search.addEventListener("input", () => {
+      activeTab = "all";
+      FeedbackPanel.setActiveTabUI();
+      FeedbackPanel.render();
+      saveDraft();
+    });
+
+    notes.addEventListener("input", saveDraft);
+
+    results.onclick = (e) => {
+      const el = e.target.closest(".beta-item");
+      if (!el) return;
+
+      const cat = el.dataset.cat;
+      const id = el.dataset.id;
+
+      if (cat) {
+        activeTab = "all";
+        search.value = cat;
+        FeedbackPanel.setActiveTabUI();
+        FeedbackPanel.render();
+        saveDraft();
+        return;
+      }
+
+      if (id) {
+        selectedId = id;
+        const item = FEEDBACK_CATALOG.find((x) => x.id === id);
+        if (item) search.value = item.title;
+        FeedbackPanel.render();
+        saveDraft();
+      }
+    };
+
+    panel.addEventListener("keydown", (e) => {
+      if (useFeedbackPanelState.get() !== "open") return;
+
+      if (e.key === "Escape") { e.preventDefault(); FeedbackButton.closePanel(); saveDraft(); return; }
+      if (e.key === "ArrowDown") { e.preventDefault(); selectByIndex(selectedIndex + 1); return; }
+      if (e.key === "ArrowUp") { e.preventDefault(); selectByIndex(selectedIndex - 1); return; }
+
+      if (e.key === "Enter" && e.target === search) {
+        e.preventDefault();
+        const items = [...results.querySelectorAll(".beta-item[data-id], .beta-item[data-cat]")];
+        const el = items[selectedIndex];
+        if (!el) return;
+
+        if (el.dataset.cat) {
+          activeTab = "all";
+          search.value = el.dataset.cat;
+          FeedbackPanel.setActiveTabUI();
+          FeedbackPanel.render();
+        } else if (el.dataset.id) {
+          selectedId = el.dataset.id;
+          const item = FEEDBACK_CATALOG.find((x) => x.id === selectedId);
+          if (item) search.value = item.title;
+          FeedbackPanel.render();
+        }
+        saveDraft();
+      }
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && useFeedbackPanelState.get() !== "closed") {
+        FeedbackButton.closePanel();
+        saveDraft();
+      }
+    });
+
+    async function enqueueOrSend(payload) {
+      try {
+        await window.DashMsg?.sendFeedback?.(payload);
+        return true;
+      } catch {
+        const q = lsGet(LS_QUEUE, []);
+        q.push(payload);
+        lsSet(LS_QUEUE, q);
+        return false;
+      }
+    }
+
+    send.onclick = async () => {
+      const qTitle = norm(search.value);
+      let cmd = selectedId ? FEEDBACK_CATALOG.find((x) => x.id === selectedId) : null;
+      if (!cmd && qTitle) cmd = FEEDBACK_CATALOG.find((x) => norm(x.title) === qTitle) || null;
+
+      const payload = {
+        type: "smart_feedback",
+        command_id: cmd?.id || null,
+        command_title: cmd?.title || search.value || null,
+        category: cmd?.cat || null,
+        notes: notes.value || "",
+        context: getFeedbackContext(),
+        ts: Date.now()
+      };
+
+      const ok = await enqueueOrSend(payload);
+      if (cmd?.id) FeedbackPanel.pushRecent(cmd.id);
+
+      if (ok) {
+        localStorage.removeItem(LS_DRAFT);
+        search.value = "";
+        notes.value = "";
+        selectedId = null;
+        activeTab = "recent";
+      } else {
+        saveDraft();
+      }
+
+      FeedbackButton.closePanel();
+      useFeedbackPanelState.sync();
+      window.DashMsgUI?.toast?.(ok ? "Sent" : "Queued", true, "Saved");
+    };
+
+    fab.onclick = () => {
+      FeedbackButton.cycle();
+      saveDraft();
+    };
+
+    miniBar.onclick = () => {
+      FeedbackButton.openPanel();
+      saveDraft();
+    };
+
+    minimize.onclick = () => {
+      FeedbackButton.minimizePanel();
+      saveDraft();
+    };
+
+    close.onclick = () => {
+      FeedbackButton.closePanel();
+      saveDraft();
+    };
+
+    restoreDraft();
+    FeedbackPanel.setActiveTabUI();
+    FeedbackPanel.render();
+    useFeedbackPanelState.sync();
+  }
+
 
   return {
     renderScreen,
@@ -417,7 +846,9 @@ const DashMsgUI = (() => {
     setNamePromptOn: () => setPrefAndRefresh("name_prompt", true),
     setNamePromptOff: () => setPrefAndRefresh("name_prompt", false),
 
-    copyTesterId
+    copyTesterId,
+    initFeedbackCommandPalette,
+    currentScreen: () => currentScreen
   };
 })();
 

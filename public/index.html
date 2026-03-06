@@ -13,6 +13,42 @@
 <body>
   <div class="container" id="app"></div>
 
+  <button id="beta-fab" class="feedback-button" type="button" title="Feedback" aria-label="Send feedback">
+    <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false">
+      <path fill="currentColor" d="M4 5a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H9.6l-3.95 3.2c-.66.53-1.65.06-1.65-.79V5zm3-1a1 1 0 0 0-1 1v11.48L8.9 14H17a1 1 0 0 0 1-1V5a1 1 0 0 0-1-1H7z"/>
+    </svg>
+  </button>
+  <button id="beta-minibar" type="button" aria-label="Restore feedback draft" title="Restore feedback draft">Feedback draft</button>
+
+  <div id="beta-panel" role="dialog" aria-label="DashMsg Feedback">
+    <div class="beta-header">
+      <div>
+        <div class="beta-title">Feedback</div>
+        <div class="beta-subtitle">Report an issue or suggest an improvement</div>
+      </div>
+      <div class="beta-header-actions">
+        <button id="beta-minimize" class="beta-icon-btn" aria-label="Minimize feedback" title="Minimize">—</button>
+        <button id="beta-close" class="beta-icon-btn" aria-label="Close feedback" title="Close">✕</button>
+      </div>
+    </div>
+
+    <input id="beta-search" placeholder="Search or type suggestion…" autocomplete="off" />
+
+    <div id="beta-tabs">
+      <button class="beta-tab is-active" data-tab="recent">Recent</button>
+      <button class="beta-tab" data-tab="all">All</button>
+      <button class="beta-tab" data-tab="categories">Categories</button>
+    </div>
+
+    <div id="beta-results" tabindex="0"></div>
+
+    <textarea id="beta-notes" placeholder="Optional details"></textarea>
+
+    <div class="beta-actions">
+      <button id="beta-send" class="beta-send">Send</button>
+    </div>
+  </div>
+
   <script type="module" src="./app/ui.js"></script>
   <script type="module" src="./app/editors.js"></script>
   <script type="module" src="./app/menus.js"></script>
