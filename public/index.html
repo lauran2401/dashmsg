@@ -53,20 +53,24 @@
 
   <script type="module">
     (function () {
-      function showErr(e) {
+      function showBootError(e) {
         const msg = (e && (e.stack || e.message)) ? (e.stack || e.message) : String(e);
-        document.body.innerHTML =
-          '<pre style="white-space:pre-wrap;padding:12px;font:12px -apple-system;background:#111;color:#fff">' +
-          msg.replaceAll('<','&lt;') +
-          '</pre>';
+        const pre = document.createElement("pre");
+        pre.style.whiteSpace = "pre-wrap";
+        pre.style.padding = "12px";
+        pre.style.font = "12px -apple-system";
+        pre.style.background = "#111";
+        pre.style.color = "#fff";
+        pre.textContent = msg;
+        document.body.appendChild(pre);
       }
-      window.addEventListener('error', ev => showErr(ev.error || ev.message));
-      window.addEventListener('unhandledrejection', ev => showErr(ev.reason));
 
       try {
         if (window.DashMsg && typeof window.DashMsg.init === "function") window.DashMsg.init();
         else throw new Error("DashMsg did not attach to window (core.js loaded but window.DashMsg is missing).");
-      } catch (e) { showErr(e); }
+      } catch (e) {
+        showBootError(e);
+      }
     })();
   </script>
 </body>

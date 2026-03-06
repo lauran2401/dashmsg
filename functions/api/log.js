@@ -11,8 +11,7 @@ export async function onRequestPost({ request, env }) {
   try { body = await request.json(); } catch {}
   if (!body || typeof body !== "object") return new Response("Bad Request", { status: 400 });
 
-  const origin = request.headers.get("origin") || "";
-  if (!origin.includes("pages.dev")) return new Response("Forbidden", { status: 403 });
+  if (!isAllowedOrigin(request, env)) return new Response("Forbidden", { status: 403 });
 
   const now = Date.now();
   const id = crypto.randomUUID();
@@ -45,6 +44,22 @@ export async function onRequestPost({ request, env }) {
   return new Response(JSON.stringify({ ok: true, id }), {
     headers: { "Content-Type": "application/json" }
   });
+}
+
+function isAllowedOrigin(request, env) {
+  const origin = request.headers.get("origin");
+  if (!origin) return true;
+
+  const configured = String(env.ALLOWED_ORIGIN || "").trim();
+  if (configured) {
+    const allowedOrigins = configured
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean);
+    return allowedOrigins.includes(origin);
+  }
+
+  return true;
 }
 
 export async function onRequestOptions({ request, env }) {
