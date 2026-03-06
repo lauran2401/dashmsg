@@ -136,7 +136,28 @@ const DashMsgUI = (() => {
         }
 
         const more = item.more ? `<span class="chev">›</span>` : "";
-        const cls = item.class ? ` ${escapeHtml(item.class)}` : "";
+        const hasInput = !!item.input;
+        const cls = `${item.class ? ` ${escapeHtml(item.class)}` : ""}${hasInput ? " has-input" : ""}`;
+
+        if (hasInput) {
+          html += `
+          <div class="row has-input">
+            <button class="row-input-action${item.class ? ` ${escapeHtml(item.class)}` : ""}" data-action='${safeAction(item.action)}'>
+              <span>${escapeHtml(item.label)}</span>
+            </button>
+            <input
+              class="row-inline-input"
+              id="${escapeHtml(item.input.id)}"
+              type="${escapeHtml(item.input.type || "text")}" 
+              inputmode="numeric"
+              min="${escapeHtml(item.input.min ?? "")}" 
+              max="${escapeHtml(item.input.max ?? "")}" 
+              placeholder="${escapeHtml(item.input.placeholder || "")}" 
+            />
+          </div>
+        `;
+          return;
+        }
 
         html += `
           <button class="row${cls}" data-action='${safeAction(item.action)}'>
@@ -238,7 +259,9 @@ const DashMsgUI = (() => {
 
   if (app) {
     app.addEventListener("click", (e) => {
-      const btn = e.target.closest("button.row, button.nav-btn");
+      if (e.target.closest(".row-inline-input")) return;
+
+      const btn = e.target.closest("button.row, button.nav-btn, .row-input-action");
       if (!btn) return;
 
       let action = null;
@@ -299,9 +322,17 @@ const DashMsgUI = (() => {
      ETA
   ----------------------- */
   function setETA() {
-    const eta = prompt("ETA? (example: 5 min)");
-    if (!eta) return;
+    const input = document.getElementById("etaMinutes");
+    const raw = String(input?.value || "").trim();
+    const minutes = Number(raw);
 
+    if (!raw || Number.isNaN(minutes) || minutes < 1 || minutes > 59) {
+      toast("Enter 1-59 min", false, "Invalid ETA");
+      if (input) input.focus();
+      return;
+    }
+
+    const eta = `${minutes} min`;
     const tpl = window.DashMsg?.getTemplate?.("HEADING_WITH_ETA") || "";
     const rendered = window.DashMsg?.renderTemplate?.(tpl, { ETA: eta }) || "";
 
@@ -309,7 +340,7 @@ const DashMsgUI = (() => {
       rendered,
       "HEADING_WITH_ETA",
       "Delivery",
-      { used_eta: 1 }
+      { used_eta: 1, eta_minutes: minutes }
     );
   }
 

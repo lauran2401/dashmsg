@@ -473,6 +473,46 @@ h1{
   color: var(--blue);
 }
 
+.row.has-input {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.row-input-action {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  padding: 0;
+  cursor: pointer;
+}
+
+.row-inline-input {
+  width: 64px;
+  min-width: 64px;
+  max-width: 64px;
+  height: 36px;
+  border: 1px solid rgba(0,0,0,0.12);
+  border-radius: 10px;
+  padding: 0 10px;
+  font: inherit;
+  font-size: 16px;
+  text-align: center;
+  background: #fff;
+  color: var(--text);
+  line-height: 1;
+}
+
+.row-inline-input:focus {
+  outline: 2px solid rgba(0,122,255,0.25);
+  outline-offset: 0;
+}
+
 /* Bottom back area (Back only at bottom) */
 .bottom-back{
   margin-top: 10px;
@@ -579,6 +619,7 @@ textarea{
 ========================= */
 @supports (-webkit-touch-callout: none){
   .row{ padding-top: 17px; padding-bottom: 17px; }
+  .row.has-input { min-height: 70px; }
 }
 .section{
 margin-bottom:22px;
